@@ -1,0 +1,6 @@
+[submodule "opus-reader"]
+	path = opus-reader
+	url = https://github.com/BerKetKet/opus-reader.git
+[submodule "render.engine"]
+	path = render.engine
+	url = https://github.com/BerKetKet/render.engine.git

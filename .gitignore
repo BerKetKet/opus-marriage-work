@@ -1,0 +1,28 @@
+# Large archive bundles
+*.zip
+
+# Proprietary binary fonts and hyphenation tables (Rule S4)
+*.ttf
+*.otf
+*.bin
+*.dic
+
+# Build and package outputs
+target/
+build/
+.gradle/
+*.class
+*.apk
+*.aab
+*.dex
+
+# Python
+__pycache__/
+*.pyc
+
+# Logs & temp files
+logs/
+*.swp
+*.bak
+.idea/
+.vscode/

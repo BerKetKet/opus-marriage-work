@@ -1,0 +1,252 @@
+diff --git a/.gitignore b/.gitignore
+index 96b815e..cd9dbea 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -23,3 +23,4 @@ __pycache__/
+ logs/
+ .idea/
+ local.properties
++engine/src/main/jniLibs/arm64-v8a/*.so
+diff --git a/NOTES.md b/NOTES.md
+index 00f8143..62fd39c 100644
+--- a/NOTES.md
++++ b/NOTES.md
+@@ -15,7 +15,7 @@
+ - **Architecture Guard:** `python3 tools/guard.py .` -> `GUARD OK`.
+ - **All Gates Passed:** `tools/gates.sh` passes completely across all modules:
+   - Unit tests: 35 tests total, 0 failed, 0 skipped.
+-  - Device tests on physical Samsung Galaxy M32 (`32001776e8e82623`, 1080x2340 @ 420 dpi): 26 tests total, 0 failed, 0 skipped.
++  - Device tests on physical Samsung Galaxy M32 (`[REDACTED_DEVICE_SERIAL]`, 1080x2340 @ 420 dpi): 26 tests total, 0 failed, 0 skipped.
+ - **Physical Phone Verification:** Tested directly on Samsung Galaxy M32 device:
+   - Text selection drag displays start/end handles and floating selection toolbar.
+   - Color swatches create highlight overlays with exact token colors.
+diff --git a/docs/LESSONS.md b/docs/LESSONS.md
+index f3b1f49..2f16d4e 100644
+--- a/docs/LESSONS.md
++++ b/docs/LESSONS.md
+@@ -2,7 +2,7 @@
+ 
+ **Date:** November 15, 2026  
+ **Branch:** `real-ui`  
+-**Test Device:** Samsung Galaxy M32 (`32001776e8e82623`, 1080x2340 @ 420 dpi, density 2.625)  
++**Test Device:** Samsung Galaxy M32 (`[REDACTED_DEVICE_SERIAL]`, 1080x2340 @ 420 dpi, density 2.625)  
+ **Status:** Halted per user instruction for architectural audit and status reporting.
+ 
+ ---
+diff --git a/docs/slices/S00_PLAN.md b/docs/slices/S00_PLAN.md
+index bac7721..33f22a3 100644
+--- a/docs/slices/S00_PLAN.md
++++ b/docs/slices/S00_PLAN.md
+@@ -24,5 +24,5 @@ Build the initial multi-module Gradle project skeleton, version catalog, AppCont
+ - Unit test in each module.
+ - Instrumentation test verifying activity launch.
+ - `tools/gates.sh` full execution.
+-- Device run on Samsung Galaxy M32 (`32001776e8e82623`).
++- Device run on Samsung Galaxy M32 (`[REDACTED_DEVICE_SERIAL]`).
+ - `python3 tools/guard.py .` -> `GUARD OK`.
+diff --git a/docs/slices/S00_REPORT.md b/docs/slices/S00_REPORT.md
+index 5f60902..7d2c47e 100644
+--- a/docs/slices/S00_REPORT.md
++++ b/docs/slices/S00_REPORT.md
+@@ -3,7 +3,7 @@
+ **Date:** November 16, 2026  
+ **Branch:** `s00-skeleton`  
+ **Tag:** `s00-done`  
+-**Target Device:** Samsung Galaxy M32 (`32001776e8e82623`, 1080x2340 @ 420 dpi)
++**Target Device:** Samsung Galaxy M32 (`[REDACTED_DEVICE_SERIAL]`, 1080x2340 @ 420 dpi)
+ 
+ ---
+ 
+@@ -15,7 +15,7 @@ The S00 multi-module skeleton has been established with strict module boundary e
+ - **Build & Assemble:** Clean compilation across all 4 modules (`:app`, `:design`, `:engine`, `:data`).
+ - **Unit Tests:** `testDebugUnitTest` executed and passed on all modules.
+ - **Lint Check:** `lintDebug` passed with 0 errors.
+-- **Instrumentation Tests:** `connectedDebugAndroidTest` ran and passed on physical device `32001776e8e82623` (`TrebleDroid with GApps - 13`).
++- **Instrumentation Tests:** `connectedDebugAndroidTest` ran and passed on physical device `[REDACTED_DEVICE_SERIAL]` (`TrebleDroid with GApps - 13`).
+ - **App Launch Verified via Dumpsys:**
+   ```
+   topResumedActivity=ActivityRecord{b951a2a u0 app.opusreader/.MainActivity} t975}
+diff --git a/engine/build.gradle.kts b/engine/build.gradle.kts
+index 8625290..f7cc101 100644
+--- a/engine/build.gradle.kts
++++ b/engine/build.gradle.kts
+@@ -19,6 +19,9 @@ android {
+         getByName("main") {
+             jniLibs.srcDirs("src/main/jniLibs")
+         }
++        getByName("androidTest") {
++            assets.srcDirs("src/androidTest/assets", "../app/src/main/assets")
++        }
+     }
+ 
+     buildTypes {
+diff --git a/engine/src/androidTest/java/app/opusreader/engine/NativeReaderEngineParityTest.kt b/engine/src/androidTest/java/app/opusreader/engine/NativeReaderEngineParityTest.kt
+index 2661b1d..e2cca2d 100644
+--- a/engine/src/androidTest/java/app/opusreader/engine/NativeReaderEngineParityTest.kt
++++ b/engine/src/androidTest/java/app/opusreader/engine/NativeReaderEngineParityTest.kt
+@@ -28,16 +28,25 @@ class NativeReaderEngineParityTest {
+ 
+     @Before
+     fun setUp() {
+-        val context = InstrumentationRegistry.getInstrumentation().targetContext
+-        val cacheDir = context.cacheDir
++        val instrumentation = InstrumentationRegistry.getInstrumentation()
++        val targetContext = instrumentation.targetContext
++        val testContext = instrumentation.context
++        val cacheDir = targetContext.cacheDir
++
++        fun openAsset(path: String) = try {
++            targetContext.assets.open(path)
++        } catch (_: Throwable) {
++            testContext.assets.open(path)
++        }
++
+         validEpubFile = File(cacheDir, "parity_valid_book.epub")
+-        context.assets.open("epubs/valid_book.epub").use { input ->
++        openAsset("epubs/valid_book.epub").use { input ->
+             validEpubFile.outputStream().use { output ->
+                 input.copyTo(output)
+             }
+         }
+         minimalEpubFile = File(cacheDir, "parity_minimal_book.epub")
+-        context.assets.open("epubs/minimal_book.epub").use { input ->
++        openAsset("epubs/minimal_book.epub").use { input ->
+             minimalEpubFile.outputStream().use { output ->
+                 input.copyTo(output)
+             }
+@@ -51,7 +60,35 @@ class NativeReaderEngineParityTest {
+             JniNativeBridge.isAvailable() && JniNativeBridge.selfTest()
+         )
+ 
+-        val engine = NativeReaderEngine(bridge = JniNativeBridge)
++        val targetContext = InstrumentationRegistry.getInstrumentation().targetContext
++        val testContext = InstrumentationRegistry.getInstrumentation().context
++        val assets = object : EngineAssets {
++            override fun fontBytes(name: String): ByteArray? {
++                for (ctx in listOf(testContext, targetContext)) {
++                    for (candidate in listOf("fonts/$name", name)) {
++                        try {
++                            ctx.assets.open(candidate).use { return it.readBytes() }
++                        } catch (_: Throwable) {
++                        }
++                    }
++                }
++                return null
++            }
++
++            override fun hyphenationBytes(lang: String): ByteArray? {
++                for (ctx in listOf(testContext, targetContext)) {
++                    for (candidate in listOf("hyphen/hyph_${lang}.bin", "hyphen/hyph_${lang}.dic", "hyph_${lang}.bin", "hyph_${lang}.dic")) {
++                        try {
++                            ctx.assets.open(candidate).use { return it.readBytes() }
++                        } catch (_: Throwable) {
++                        }
++                    }
++                }
++                return null
++            }
++        }
++
++        val engine = NativeReaderEngine(bridge = JniNativeBridge, assets = assets)
+         try {
+             val info = engine.open(
+                 BookSource(id = "valid_parity", filePath = validEpubFile.absolutePath),
+@@ -84,6 +121,82 @@ class NativeReaderEngineParityTest {
+         }
+     }
+ 
++    @Test
++    fun measureDevicePerformance() = runBlocking {
++        assumeTrue(
++            "Native library libkindle_render_jni.so is not bundled or selfTest failed on this device; skipping benchmark",
++            JniNativeBridge.isAvailable() && JniNativeBridge.selfTest()
++        )
++
++        val targetContext = InstrumentationRegistry.getInstrumentation().targetContext
++        val testContext = InstrumentationRegistry.getInstrumentation().context
++        val assets = object : EngineAssets {
++            override fun fontBytes(name: String): ByteArray? {
++                for (ctx in listOf(testContext, targetContext)) {
++                    for (candidate in listOf("fonts/$name", name)) {
++                        try {
++                            ctx.assets.open(candidate).use { return it.readBytes() }
++                        } catch (_: Throwable) {
++                        }
++                    }
++                }
++                return null
++            }
++
++            override fun hyphenationBytes(lang: String): ByteArray? {
++                for (ctx in listOf(testContext, targetContext)) {
++                    for (candidate in listOf("hyphen/hyph_${lang}.bin", "hyphen/hyph_${lang}.dic", "hyph_${lang}.bin", "hyph_${lang}.dic")) {
++                        try {
++                            ctx.assets.open(candidate).use { return it.readBytes() }
++                        } catch (_: Throwable) {
++                        }
++                    }
++                }
++                return null
++            }
++        }
++
++        val engine = NativeReaderEngine(bridge = JniNativeBridge, assets = assets)
++        try {
++            val t0 = System.nanoTime()
++            val info = engine.open(
++                BookSource(id = "valid_parity", filePath = validEpubFile.absolutePath),
++                ReaderSettings(kindleGeometryIndex = 1)
++            )
++            val openMs = (System.nanoTime() - t0) / 1_000_000.0
++
++            val t1 = System.nanoTime()
++            val page0 = engine.pageAt(Locator(0, 0))
++            val modelMs = (System.nanoTime() - t1) / 1_000_000.0
++
++            val renderTimes = mutableListOf<Double>()
++            val bitmap = Bitmap.createBitmap(1080, 2340, Bitmap.Config.ARGB_8888)
++            val canvas = Canvas(bitmap)
++            val theme = PageTheme(textColor = Color.BLACK, backgroundColor = Color.WHITE)
++
++            for (i in 0 until 10) {
++                val tr0 = System.nanoTime()
++                engine.draw(page0, canvas, theme)
++                val trMs = (System.nanoTime() - tr0) / 1_000_000.0
++                renderTimes.add(trMs)
++            }
++            renderTimes.sort()
++            val p50 = renderTimes[(renderTimes.size * 0.50).toInt()]
++            val p95 = renderTimes[(renderTimes.size * 0.95).toInt().coerceAtMost(renderTimes.size - 1)]
++
++            android.util.Log.i("DEVICE_BENCHMARK", String.format(
++                "[DEVICE_BENCHMARK] open=%.2fms model=%.2fms render_p50=%.2fms render_p95=%.2fms",
++                openMs, modelMs, p50, p95
++            ))
++            System.out.println(String.format(
++                "[DEVICE_BENCHMARK] open=%.2fms model=%.2fms render_p50=%.2fms render_p95=%.2fms",
++                openMs, modelMs, p50, p95
++            ))
++        } finally {
++            engine.close()
++        }
++    }
++
+     private fun sha256Hex(bytes: ByteArray): String {
+         val digest = MessageDigest.getInstance("SHA-256").digest(bytes)
+         return digest.joinToString("") { "%02x".format(it) }
+diff --git a/engine/src/test/java/app/opusreader/engine/NativeReaderEngineTest.kt b/engine/src/test/java/app/opusreader/engine/NativeReaderEngineTest.kt
+index 5b9b292..d45305e 100644
+--- a/engine/src/test/java/app/opusreader/engine/NativeReaderEngineTest.kt
++++ b/engine/src/test/java/app/opusreader/engine/NativeReaderEngineTest.kt
+@@ -80,7 +80,10 @@ class NativeReaderEngineTest : ReaderEngineContract() {
+         val wHit = hit!!
+         val ovStart = maxOf(expectedWord.start.charOffset, wHit.start.charOffset)
+         val ovEnd = minOf(expectedWord.end.charOffset, wHit.end.charOffset)
+-        assertTrue("Expected positive overlap between $expectedWord and $wHit", ovEnd > ovStart)
++        assertTrue(
++            "Expected positive overlap between '${expectedWord.text}' (${expectedWord.start}..${expectedWord.end}) and '${wHit.text}' (${wHit.start}..${wHit.end})",
++            ovEnd > ovStart
++        )
+         val expectedSub = expectedWord.text.substring(
+             ovStart - expectedWord.start.charOffset,
+             ovEnd - expectedWord.start.charOffset

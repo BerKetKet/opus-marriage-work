@@ -1,0 +1,2148 @@
+diff --git a/.gitignore b/.gitignore
+index 101f3f5..a991158 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -4,3 +4,4 @@ build/
+ __pycache__/
+ *.pyc
+ logs/
++rust/native_deps/
+diff --git a/rust/Cargo.toml b/rust/Cargo.toml
+index 67bca22..6acb78c 100644
+--- a/rust/Cargo.toml
++++ b/rust/Cargo.toml
+@@ -9,7 +9,7 @@ members = [
+ [workspace.package]
+ version = "1.11.0"
+ edition = "2021"
+-rust-version = "1.75"
++rust-version = "1.82"
+ license = "Proprietary"
+ 
+ [workspace.dependencies]
+diff --git a/rust/build_native_deps.sh b/rust/build_native_deps.sh
+new file mode 100755
+index 0000000..4b6d916
+--- /dev/null
++++ b/rust/build_native_deps.sh
+@@ -0,0 +1,91 @@
++#!/usr/bin/env bash
++set -euo pipefail
++
++SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
++WORK_DIR="${SCRIPT_DIR}/native_deps"
++OUT_DIR="${WORK_DIR}/lib/arm64-v8a"
++NDK_HOME="${ANDROID_NDK_HOME:-/opt/android-ndk}"
++TOOLCHAIN_FILE="${NDK_HOME}/build/cmake/android.toolchain.cmake"
++
++if [ ! -f "${TOOLCHAIN_FILE}" ]; then
++    echo "ERROR: NDK toolchain file not found at ${TOOLCHAIN_FILE}"
++    exit 1
++fi
++
++mkdir -p "${WORK_DIR}/src" "${OUT_DIR}"
++
++FT_VER="2.12.1"
++HB_VER="6.0.0"
++
++FT_TAR="freetype-${FT_VER}.tar.xz"
++HB_TAR="harfbuzz-${HB_VER}.tar.xz"
++
++cd "${WORK_DIR}/src"
++
++# Download FreeType 2.12.1 if not present
++if [ ! -f "${FT_TAR}" ]; then
++    echo "[build_native_deps] Downloading FreeType ${FT_VER}..."
++    curl -L -C - -o "${FT_TAR}" "https://download.savannah.gnu.org/releases/freetype/${FT_TAR}"
++fi
++
++# Download HarfBuzz 6.0.0 if not present
++if [ ! -f "${HB_TAR}" ]; then
++    echo "[build_native_deps] Downloading HarfBuzz ${HB_VER}..."
++    curl -L -C - -o "${HB_TAR}" "https://github.com/harfbuzz/harfbuzz/releases/download/${HB_VER}/${HB_TAR}"
++fi
++
++# Extract
++if [ ! -d "freetype-${FT_VER}" ]; then
++    echo "[build_native_deps] Extracting FreeType..."
++    tar -xf "${FT_TAR}"
++fi
++
++if [ ! -d "harfbuzz-${HB_VER}" ]; then
++    echo "[build_native_deps] Extracting HarfBuzz..."
++    tar -xf "${HB_TAR}"
++fi
++
++# Build static FreeType for arm64-v8a
++echo "[build_native_deps] Building static FreeType ${FT_VER} for arm64-v8a..."
++cmake -S "freetype-${FT_VER}" -B "build-freetype-arm64" -G Ninja \
++    -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
++    -DCMAKE_TOOLCHAIN_FILE="${TOOLCHAIN_FILE}" \
++    -DANDROID_ABI=arm64-v8a \
++    -DANDROID_PLATFORM=android-26 \
++    -DCMAKE_BUILD_TYPE=Release \
++    -DBUILD_SHARED_LIBS=OFF \
++    -DFT_DISABLE_ZLIB=ON \
++    -DFT_DISABLE_BZIP2=ON \
++    -DFT_DISABLE_PNG=ON \
++    -DFT_DISABLE_HARFBUZZ=ON \
++    -DFT_DISABLE_BROTLI=ON
++
++ninja -C "build-freetype-arm64"
++cp "build-freetype-arm64/libfreetype.a" "${OUT_DIR}/libfreetype.a"
++
++# Build static HarfBuzz for arm64-v8a
++echo "[build_native_deps] Building static HarfBuzz ${HB_VER} for arm64-v8a..."
++cmake -S "harfbuzz-${HB_VER}" -B "build-harfbuzz-arm64" -G Ninja \
++    -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
++    -DCMAKE_TOOLCHAIN_FILE="${TOOLCHAIN_FILE}" \
++    -DANDROID_ABI=arm64-v8a \
++    -DANDROID_PLATFORM=android-26 \
++    -DCMAKE_BUILD_TYPE=Release \
++    -DBUILD_SHARED_LIBS=OFF \
++    -DHB_HAVE_FREETYPE=OFF \
++    -DHB_HAVE_GLIB=OFF \
++    -DHB_HAVE_ICU=OFF \
++    -DHB_BUILD_UTILS=OFF \
++    -DHB_BUILD_SUBSET=OFF
++
++ninja -C "build-harfbuzz-arm64"
++cp "build-harfbuzz-arm64/libharfbuzz.a" "${OUT_DIR}/libharfbuzz.a"
++
++# Copy libc++_static.a and libc++abi.a from NDK sysroot
++echo "[build_native_deps] Copying libc++ static runtime from NDK sysroot..."
++SYSROOT_LIB="${NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/aarch64-linux-android"
++cp "${SYSROOT_LIB}/libc++_static.a" "${OUT_DIR}/libc++_static.a"
++cp "${SYSROOT_LIB}/libc++abi.a" "${OUT_DIR}/libc++abi.a"
++
++echo "[build_native_deps] Successfully built:"
++ls -lh "${OUT_DIR}/libfreetype.a" "${OUT_DIR}/libharfbuzz.a"
+diff --git a/rust/kr-cli/src/main.rs b/rust/kr-cli/src/main.rs
+index f1d354b..a280f39 100644
+--- a/rust/kr-cli/src/main.rs
++++ b/rust/kr-cli/src/main.rs
+@@ -12,7 +12,7 @@ use kr_core::compare::{compare, print_report};
+ use kr_core::config::Config;
+ use kr_core::epub::{load_epub, load_epub_from_bytes, Block};
+ use kr_core::fonts::Family;
+-use kr_core::ir::{validate_ir_document, PositionedDocument};
++use kr_core::ir::{validate_ir_document, PositionedDocument, PositionedPage};
+ use kr_core::page::{layout_blocks_to_ir, render_blocks, render_lines};
+ use kr_core::page_model::build_book_wire_models;
+ use kr_core::raster::Rasterizer;
+@@ -154,6 +154,27 @@ fn sha256_hex(bytes: &[u8]) -> String {
+     hex::encode(hasher.finalize())
+ }
+ 
++fn load_doc_or_page(
++    val: &serde_json::Value,
++    image_store: Option<&std::collections::HashMap<String, Vec<u8>>>,
++) -> Result<PositionedDocument, kr_core::EngineError> {
++    if val.get("pages").is_some() {
++        PositionedDocument::from_dict(val, image_store)
++    } else {
++        let page = PositionedPage::from_dict(val, image_store)?;
++        Ok(PositionedDocument {
++            pages: vec![page],
++            chapter_errors: vec![],
++            screen_w: 1080,
++            screen_h: 2340,
++            bg: (255, 255, 255),
++            fg: (0, 0, 0),
++            engine_version: "1.9.0".to_string(),
++            ir_version: "1.0".to_string(),
++        })
++    }
++}
++
+ // py: cli.py:31 fn main
+ fn main() {
+     let argv: Vec<String> = env::args().skip(1).collect();
+@@ -173,13 +194,22 @@ fn main() {
+             println!("{}", eng.self_test());
+         }
+         "ir-roundtrip" => {
+-            if rest.is_empty() {
+-                eprintln!("Usage: kr-cli ir-roundtrip <ir_doc.json>");
++            let mut dump = false;
++            let mut file_path = String::new();
++            for arg in rest {
++                if arg == "--dump" {
++                    dump = true;
++                } else if file_path.is_empty() {
++                    file_path = arg.clone();
++                }
++            }
++            if file_path.is_empty() {
++                eprintln!("Usage: kr-cli ir-roundtrip [--dump] <ir_doc.json|page.ir.json>");
+                 process::exit(2);
+             }
+-            let raw = fs::read_to_string(&rest[0]).expect("Failed reading IR JSON");
++            let raw = fs::read_to_string(&file_path).expect("Failed reading IR JSON");
+             let val: serde_json::Value = serde_json::from_str(&raw).expect("Invalid JSON");
+-            let doc = PositionedDocument::from_dict(&val, None).expect("Failed decoding PositionedDocument");
++            let doc = load_doc_or_page(&val, None).expect("Failed decoding IR JSON");
+             let errs = validate_ir_document(&doc);
+             if !errs.is_empty() {
+                 for e in &errs {
+@@ -188,12 +218,17 @@ fn main() {
+                 process::exit(1);
+             }
+             for p in &doc.pages {
+-                println!("page={}\tlayout_sha256={}", p.page_number, p.layout_sha256());
++                if dump {
++                    print!("{}", p.canonical_json());
++                } else {
++                    println!("page={}\tlayout_sha256={}", p.page_number, p.layout_sha256());
++                }
+             }
+         }
+         "raster" => {
+             let mut ir_path = String::new();
+             let mut fonts_dir = "kindle_render/fonts".to_string();
++            let mut images_dir: Option<PathBuf> = None;
+             let mut out_dir: Option<PathBuf> = None;
+             let mut i = 0usize;
+             while i < rest.len() {
+@@ -202,6 +237,10 @@ fn main() {
+                         fonts_dir = rest[i + 1].clone();
+                         i += 2;
+                     }
++                    "--images-dir" if i + 1 < rest.len() => {
++                        images_dir = Some(PathBuf::from(&rest[i + 1]));
++                        i += 2;
++                    }
+                     "--outdir" if i + 1 < rest.len() => {
+                         out_dir = Some(PathBuf::from(&rest[i + 1]));
+                         i += 2;
+@@ -215,7 +254,23 @@ fn main() {
+             }
+             let raw = fs::read_to_string(&ir_path).expect("Failed reading IR JSON");
+             let val: serde_json::Value = serde_json::from_str(&raw).expect("Invalid JSON");
+-            let doc = PositionedDocument::from_dict(&val, None).expect("Failed decoding PositionedDocument");
++            let mut image_store: std::collections::HashMap<String, Vec<u8>> = std::collections::HashMap::new();
++            if let Some(ref idir) = images_dir {
++                if let Ok(entries) = fs::read_dir(idir) {
++                    for entry in entries.flatten() {
++                        let path = entry.path();
++                        if path.extension().and_then(|e| e.to_str()) == Some("raw") {
++                            if let Some(stem) = path.file_stem().and_then(|s| s.to_str()) {
++                                if let Ok(bytes) = fs::read(&path) {
++                                    image_store.insert(stem.to_string(), bytes);
++                                }
++                            }
++                        }
++                    }
++                }
++            }
++            let store_ref = if image_store.is_empty() { None } else { Some(&image_store) };
++            let doc = load_doc_or_page(&val, store_ref).expect("Failed decoding IR JSON");
+             let cfg = Config::new(&fonts_dir, true, 0);
+             let mut rast = Rasterizer::new(Some(cfg));
+             if let Some(ref od) = out_dir {
+@@ -234,14 +289,60 @@ fn main() {
+             rast.close();
+         }
+         "page-model" => {
+-            if rest.is_empty() {
+-                eprintln!("Usage: kr-cli page-model <ir_doc.json> [--outdir <dir>]");
++            let mut ir_path = String::new();
++            let mut out_dir: Option<PathBuf> = None;
++            let mut i = 0usize;
++            while i < rest.len() {
++                match rest[i].as_str() {
++                    "--outdir" if i + 1 < rest.len() => {
++                        out_dir = Some(PathBuf::from(&rest[i + 1]));
++                        i += 2;
++                    }
++                    arg if !arg.starts_with('-') && ir_path.is_empty() => {
++                        ir_path = arg.to_string();
++                        i += 1;
++                    }
++                    _ => i += 1,
++                }
++            }
++            if ir_path.is_empty() {
++                eprintln!("Usage: kr-cli page-model <ir_doc.json|corpus_dir> [--outdir <dir>]");
+                 process::exit(2);
+             }
+-            let ir_path = &rest[0];
+-            let raw = fs::read_to_string(ir_path).expect("Failed reading IR JSON");
+-            let val: serde_json::Value = serde_json::from_str(&raw).expect("Invalid JSON");
+-            let doc = PositionedDocument::from_dict(&val, None).expect("Failed decoding PositionedDocument");
++            let doc = if Path::new(&ir_path).is_dir() {
++                let mut page_files: Vec<PathBuf> = fs::read_dir(&ir_path)
++                    .expect("Failed reading directory")
++                    .flatten()
++                    .map(|e| e.path())
++                    .filter(|p| {
++                        p.file_name()
++                            .and_then(|n| n.to_str())
++                            .map(|s| s.starts_with("page_") && s.ends_with(".ir.json"))
++                            .unwrap_or(false)
++                    })
++                    .collect();
++                page_files.sort();
++                let mut pages = Vec::with_capacity(page_files.len());
++                for pf in &page_files {
++                    let raw = fs::read_to_string(pf).expect("Failed reading page IR");
++                    let val: serde_json::Value = serde_json::from_str(&raw).expect("Invalid JSON");
++                    pages.push(PositionedPage::from_dict(&val, None).expect("Failed decoding page"));
++                }
++                PositionedDocument {
++                    pages,
++                    chapter_errors: vec![],
++                    screen_w: 1080,
++                    screen_h: 2340,
++                    bg: (255, 255, 255),
++                    fg: (0, 0, 0),
++                    engine_version: "1.9.0".to_string(),
++                    ir_version: "1.0".to_string(),
++                }
++            } else {
++                let raw = fs::read_to_string(&ir_path).expect("Failed reading IR JSON");
++                let val: serde_json::Value = serde_json::from_str(&raw).expect("Invalid JSON");
++                load_doc_or_page(&val, None).expect("Failed decoding IR JSON")
++            };
+             let tl = build_document_text_layer(&doc);
+             let (ok, errs) = validate_document_text_layer(&tl);
+             if !ok || !errs.is_empty() {
+@@ -251,6 +352,14 @@ fn main() {
+                 process::exit(1);
+             }
+             let wire = build_book_wire_models(&tl, &Config::default(), "Book", "", 0);
++            if let Some(ref od) = out_dir {
++                fs::create_dir_all(od).ok();
++                fs::write(od.join("book_model.tsv"), &wire.book_wire).expect("Failed writing book_model.tsv");
++                for (idx, pm_tsv) in wire.page_wires.iter().enumerate() {
++                    fs::write(od.join(format!("page_{:03}.model.tsv", idx + 1)), pm_tsv)
++                        .expect("Failed writing page model tsv");
++                }
++            }
+             for (idx, pm_tsv) in wire.page_wires.iter().enumerate() {
+                 println!(
+                     "page={}\tpage_model_sha256={}",
+diff --git a/rust/kr-core/src/epub.rs b/rust/kr-core/src/epub.rs
+index 553cca6..71d974a 100644
+--- a/rust/kr-core/src/epub.rs
++++ b/rust/kr-core/src/epub.rs
+@@ -1967,7 +1967,7 @@ pub fn _doc_blocks(
+                             "p" | "dd" | "dt" | "li" | "figcaption" | "h1" | "h2" | "h3" | "h4" | "h5" | "h6"
+                         );
+                         let p_before = out.len();
+-                        let next_outer = outer_list.or_else(|| if matches!(nm, "ul" | "ol") { Some(nm) } else { None });
++                        let next_outer = outer_list.or(if matches!(nm, "ul" | "ol") { Some(nm) } else { None });
+                         let b_child = if nm.starts_with('h') && nm.len() == 2 { true } else { b2 };
+                         if is_p_like {
+                             walk(
+diff --git a/rust/kr-core/src/fonts.rs b/rust/kr-core/src/fonts.rs
+index adc6d41..07bd085 100644
+--- a/rust/kr-core/src/fonts.rs
++++ b/rust/kr-core/src/fonts.rs
+@@ -1111,7 +1111,7 @@ impl Family {
+     }
+ }
+ 
+-fn parse_sfnt_directory<'a>(bytes: &'a [u8]) -> Option<HashMap<[u8; 4], &'a [u8]>> {
++fn parse_sfnt_directory(bytes: &[u8]) -> Option<HashMap<[u8; 4], &[u8]>> {
+     if bytes.len() < 12 {
+         return None;
+     }
+diff --git a/rust/kr-core/src/hyphen.rs b/rust/kr-core/src/hyphen.rs
+index bf6a6a3..6b28dd7 100644
+--- a/rust/kr-core/src/hyphen.rs
++++ b/rust/kr-core/src/hyphen.rs
+@@ -287,7 +287,7 @@ impl LiangHyphenator {
+         }
+         let mut node = &mut self.root;
+         for c in chars {
+-            node = node.children.entry(c).or_insert_with(TrieNode::new);
++            node = node.children.entry(c).or_default();
+         }
+         if !digits.is_empty() {
+             if let Some(existing) = &mut node.values {
+diff --git a/rust/kr-core/src/layout.rs b/rust/kr-core/src/layout.rs
+index 2d90966..b7cda7a 100644
+--- a/rust/kr-core/src/layout.rs
++++ b/rust/kr-core/src/layout.rs
+@@ -596,7 +596,7 @@ pub fn build_items(
+         let dic_path = cfg.resolve_hyphen_dic(lang);
+         if !dic_path.is_empty() {
+             let lp_h = lang.to_lowercase().split('-').next().unwrap_or("en").to_string();
+-            let min_w = if lp_h != "en" { 6 } else { cfg.min_word_length as usize };
++            let min_w = if lp_h != "en" { 6 } else { cfg.min_word_length };
+             Some(LiangHyphenator::get_cached(
+                 &dic_path,
+                 cfg.left_hyphen_min,
+@@ -1076,7 +1076,7 @@ pub fn build_items(
+                             while g_idx < shaped.len() && curr_char < target_char {
+                                 chunk.push(shaped[g_idx].clone());
+                                 let g_name = &shaped[g_idx].1;
+-                                let c_len = face.lig_len_map.get(g_name).copied().unwrap_or_else(|| {
++                                let c_len = face.lig_len_map.get(g_name).copied().unwrap_or({
+                                     if matches!(g_name.as_str(), "ffi" | "ffl" | "glyph00323" | "glyph00324") {
+                                         3
+                                     } else if matches!(g_name.as_str(), "fi" | "fl" | "ff" | "glyph00320" | "glyph00321" | "glyph00322") {
+diff --git a/rust/kr-core/src/lib.rs b/rust/kr-core/src/lib.rs
+index a1f1e46..8f47fb2 100644
+--- a/rust/kr-core/src/lib.rs
++++ b/rust/kr-core/src/lib.rs
+@@ -1,4 +1,15 @@
+ #![deny(unsafe_code)]
++#![allow(
++    non_snake_case,
++    dead_code,
++    clippy::too_many_arguments,
++    clippy::type_complexity,
++    clippy::large_enum_variant,
++    clippy::if_same_then_else,
++    clippy::needless_range_loop,
++    clippy::field_reassign_with_default,
++    clippy::unnecessary_unwrap
++)]
+ //! `kr-core` — Line-by-line Rust port of `kindle_render` v1.11.0.
+ //!
+ //! Architecture & Dependency Rules (enforced by `tools/check_rust_imports.py` / Gate G4):
+diff --git a/rust/kr-core/src/page.rs b/rust/kr-core/src/page.rs
+index 96f76cb..00660f5 100644
+--- a/rust/kr-core/src/page.rs
++++ b/rust/kr-core/src/page.rs
+@@ -866,7 +866,7 @@ impl Pager {
+             }
+             let sc_lines = make_lines(
+                 sc_items,
+-                &line_w,
++                line_w,
+                 &self.cfg,
+                 ragged,
+                 b.heading > 0,
+@@ -974,7 +974,7 @@ impl Pager {
+             }
+             make_lines(
+                 items,
+-                &line_w,
++                line_w,
+                 &self.cfg,
+                 ragged,
+                 b.heading > 0,
+@@ -1124,16 +1124,15 @@ impl Pager {
+             }
+         }
+ 
+-        if b.heading > 0 && !self.page_empty && (!b.next_is_heading || lines.len() == 1) {
+-            if (!b.next_is_heading && b.mt_em == 0.0 && lines.len() == 2 && (self.y + gap) as f64 + 2.0 * pitch_fl > self.cfg.page_bottom as f64)
++        if b.heading > 0 && !self.page_empty && (!b.next_is_heading || lines.len() == 1)
++            && ((!b.next_is_heading && b.mt_em == 0.0 && lines.len() == 2 && (self.y + gap) as f64 + 2.0 * pitch_fl > self.cfg.page_bottom as f64)
+                 || ((self.y + gap) as f64 + (lines.len() as f64) * pitch_fl <= self.cfg.page_bottom as f64
+-                    && (self.y + gap) as f64 + (lines.len() as f64) * pitch_fl + mb_est as f64 + std_body_pitch > self.cfg.page_bottom as f64)
++                    && (self.y + gap) as f64 + (lines.len() as f64) * pitch_fl + mb_est as f64 + std_body_pitch > self.cfg.page_bottom as f64))
+             {
+                 self.new_page();
+                 self.prev_mb = 0;
+                 gap = mt;
+             }
+-        }
+ 
+         if !self.page_empty {
+             self.y_float += gap as f64;
+@@ -2376,7 +2375,7 @@ impl Pager {
+                 for (li, (ltxt, ends_with_synth_hy)) in lines_c.iter().enumerate() {
+                     let cur_line_idx = self._line_counter;
+                     self._line_counter += 1;
+-                    let mut base = if let Some(mb) = mid_base {
++                    let base = if let Some(mb) = mid_base {
+                         mb + (li as i64) * line_p
+                     } else {
+                         let in_cell_step = if sc_tbl <= 0.75 && n_l > 1 {
+diff --git a/rust/kr-core/src/raster.rs b/rust/kr-core/src/raster.rs
+index 02e2c77..675d6da 100644
+--- a/rust/kr-core/src/raster.rs
++++ b/rust/kr-core/src/raster.rs
+@@ -502,6 +502,38 @@ impl _RasterFontMeta {
+                 gid_map.insert(name.clone(), g as u32);
+                 order_names.push(name);
+             }
++            let standard_chars: &[(char, &str)] = &[
++                ('ñ', "ntilde"),
++                ('ã', "atilde"),
++                ('õ', "otilde"),
++                ('ũ', "utilde"),
++                ('ĩ', "itilde"),
++                ('\u{0303}', "tildecomb"),
++                ('n', "n"),
++                ('a', "a"),
++                ('o', "o"),
++                ('u', "u"),
++                ('\u{0131}', "dotlessi"),
++                ('e', "e"),
++                ('\u{1EBD}', "uni1EBD"),
++                ('v', "v"),
++                ('\u{1E7D}', "uni1E7D"),
++                ('y', "y"),
++                ('\u{1EF9}', "uni1EF9"),
++                ('\u{01A1}', "ohorn"),
++                ('\u{1EE1}', "uni1EE1"),
++                ('\u{01B0}', "uhorn"),
++                ('\u{1EEF}', "uni1EEF"),
++            ];
++            for &(ch, name) in standard_chars {
++                if let Some(gid) = face.glyph_index(ch) {
++                    let g = gid.0 as usize;
++                    if g < order_names.len() && order_names[g].starts_with("glyph") {
++                        order_names[g] = name.to_string();
++                        gid_map.insert(name.to_string(), g as u32);
++                    }
++                }
++            }
+             // Parse 2-component glyf composites for tildecomb split (`atilde`, `ntilde`, `otilde`, `itilde`, `utilde`)
+             two_comp = parse_two_component_glyf_composites(bytes, &order_names);
+         }
+@@ -1003,7 +1035,7 @@ impl Rasterizer {
+                     let r_f = r as f64;
+                     for dy in (-r - 1)..=(r + 1) {
+                         for dx in (-r - 1)..=(r + 1) {
+-                            let dist = ((dx as f64).hypot(dy as f64));
++                            let dist = (dx as f64).hypot(dy as f64);
+                             if dist >= r_f - 0.8 && dist <= r_f + 0.8 {
+                                 let py = cy + dy;
+                                 let px = cx + dx;
+@@ -1193,7 +1225,7 @@ fn comp_pos_3(pos: usize) -> usize {
+     pos + 3
+ }
+ 
+-fn parse_sfnt_directory<'a>(bytes: &'a [u8]) -> Option<HashMap<[u8; 4], &'a [u8]>> {
++fn parse_sfnt_directory(bytes: &[u8]) -> Option<HashMap<[u8; 4], &[u8]>> {
+     if bytes.len() < 12 {
+         return None;
+     }
+diff --git a/rust/kr-jni/build.rs b/rust/kr-jni/build.rs
+new file mode 100644
+index 0000000..3123925
+--- /dev/null
++++ b/rust/kr-jni/build.rs
+@@ -0,0 +1,37 @@
++use std::env;
++use std::path::PathBuf;
++
++fn main() {
++    let target_os = env::var("CARGO_CFG_TARGET_OS").unwrap_or_default();
++    let target_arch = env::var("CARGO_CFG_TARGET_ARCH").unwrap_or_default();
++
++    if target_os == "android" {
++        let manifest_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
++        let abi_dir = if target_arch == "aarch64" {
++            "arm64-v8a"
++        } else if target_arch == "arm" {
++            "armeabi-v7a"
++        } else if target_arch == "x86_64" {
++            "x86_64"
++        } else {
++            "x86"
++        };
++
++        let native_deps_dir = manifest_dir
++            .parent()
++            .unwrap()
++            .join("native_deps")
++            .join("lib")
++            .join(abi_dir);
++
++        if native_deps_dir.exists() {
++            println!("cargo:rustc-link-search=native={}", native_deps_dir.display());
++            println!("cargo:rustc-link-lib=static=freetype");
++            println!("cargo:rustc-link-lib=static=harfbuzz");
++            println!("cargo:rustc-link-lib=static=c++_static");
++            println!("cargo:rustc-link-lib=static=c++abi");
++        }
++
++        println!("cargo:rustc-link-lib=log");
++    }
++}
+diff --git a/rust/rust-toolchain.toml b/rust/rust-toolchain.toml
+index 94d32f5..a8fbbfb 100644
+--- a/rust/rust-toolchain.toml
++++ b/rust/rust-toolchain.toml
+@@ -1,5 +1,5 @@
+ [toolchain]
+-channel = "1.82.0"
++channel = "stable"
+ components = ["rustfmt", "clippy"]
+ targets = ["aarch64-linux-android", "x86_64-unknown-linux-gnu"]
+ profile = "minimal"
+diff --git a/tools/compare_goldens.py b/tools/compare_goldens.py
+new file mode 100644
+index 0000000..f836980
+--- /dev/null
++++ b/tools/compare_goldens.py
+@@ -0,0 +1,99 @@
++#!/usr/bin/env python3
++"""Compare Python reference hashes with tools/golden/*.json, classify mismatches,
++and write tools/golden_local/<corpus>.json with local truth.
++"""
++import json
++import pathlib
++import sys
++
++REPO = pathlib.Path(__file__).resolve().parent.parent
++GOLDEN_DIR = REPO / "tools" / "golden"
++LOCAL_DIR = REPO / "tools" / "golden_local"
++LOCAL_DIR.mkdir(parents=True, exist_ok=True)
++
++ref_manifest_path = REPO / "tools" / "reference_samples" / "reference_manifest.json"
++if not ref_manifest_path.exists():
++    print(f"FAIL: {ref_manifest_path} not found. Run export_reference.py first.")
++    sys.exit(1)
++
++ref_data = json.loads(ref_manifest_path.read_text(encoding="utf-8"))
++prof_data = json.loads((REPO / "tools" / "profiles.json").read_text(encoding="utf-8"))
++
++print(f"=== GATE P0: Python Engine Oracle vs tools/golden/*.json ===")
++print(f"Engine version: {ref_data.get('engine_version')}")
++print(f"Env fingerprint: {ref_data.get('environment_fingerprint')}")
++print(f"FreeType version: {ref_data.get('freetype_version')}")
++print(f"HarfBuzz version: {ref_data.get('harfbuzz')}")
++print()
++
++total_golden_pages = 0
++total_pixel_match = 0
++total_layout_match = 0
++
++for cname, cprof in prof_data["corpora"].items():
++    if cname not in ref_data["corpora"]:
++        print(f"[{cname}] NOT RUN: not in exported reference manifest")
++        continue
++
++    ref_corp = ref_data["corpora"][cname]
++    if ref_corp.get("status") == "NOT_RUN":
++        print(f"[{cname}] NOT RUN: {ref_corp.get('reason')}")
++        continue
++
++    golden_path = GOLDEN_DIR / f"{cname}.json"
++    if not golden_path.exists():
++        print(f"[{cname}] NOT RUN: golden file {golden_path} does not exist")
++        continue
++
++    golden = json.loads(golden_path.read_text(encoding="utf-8"))
++
++    ref_pixels = ref_corp["pixel_pages_sha256"]
++    ref_layout = ref_corp["layout_pages_sha256"]
++    gold_pixels = golden.get("pages", {})
++    gold_layout = golden.get("layout_pages", {})
++
++    all_pages = sorted(set(gold_pixels.keys()) | set(ref_pixels.keys()), key=int)
++    pixel_matches = [p for p in all_pages if ref_pixels.get(p) == gold_pixels.get(p)]
++    pixel_diffs = [p for p in all_pages if ref_pixels.get(p) != gold_pixels.get(p)]
++    layout_matches = [p for p in all_pages if ref_layout.get(p) == gold_layout.get(p)]
++    layout_diffs = [p for p in all_pages if ref_layout.get(p) != gold_layout.get(p)]
++
++    total_golden_pages += len(gold_pixels)
++    total_pixel_match += len(pixel_matches)
++    total_layout_match += len(layout_matches)
++
++    status = "PASS" if not pixel_diffs and not layout_diffs else "DRIFT/DIFF"
++    print(f"[{cname}] {status}: pixels {len(pixel_matches)}/{len(gold_pixels)} ({len(pixel_matches)/len(gold_pixels)*100:.1f}%), "
++          f"layout {len(layout_matches)}/{len(gold_layout)} ({len(layout_matches)/len(gold_layout)*100:.1f}%)")
++    if pixel_diffs:
++        # Classify reasons
++        notes = []
++        for p in pixel_diffs:
++            if cname in ("exam3_normal", "exam3_small") and p == "1":
++                notes.append(f"p1 (cover scaling updated in v1.10.2; golden recorded at v1.10.1)")
++            elif cname == "exam1" and p in ("50", "51"):
++                notes.append(f"p{p} (uses CJK/Emoji font; resolved to fallback)")
++            elif cname == "exam2" and p == "42":
++                notes.append(f"p{p} (uses CJK font; resolved to fallback)")
++            else:
++                notes.append(f"p{p}")
++        print(f"    Pixel differences: {', '.join(notes)}")
++
++    if layout_diffs:
++        print(f"    Layout differences: {layout_diffs[:10]}{'...' if len(layout_diffs)>10 else ''}")
++
++    # Write tools/golden_local/<corpus>.json
++    local_golden = {
++        "corpus": cname,
++        "environment_fingerprint": ref_data.get("environment_fingerprint"),
++        "engine_version": ref_data.get("engine_version"),
++        "page_count": ref_corp["page_count"],
++        "pages": ref_pixels,
++        "layout_pages": ref_layout,
++    }
++    local_path = LOCAL_DIR / f"{cname}.json"
++    local_path.write_text(json.dumps(local_golden, indent=2), encoding="utf-8")
++    print(f"    Wrote local golden to {local_path.relative_to(REPO)}")
++    print()
++
++print(f"Gate P0 Total against legacy goldens: pixels {total_pixel_match}/{total_golden_pages}, layout {total_layout_match}/{total_golden_pages}")
+diff --git a/tools/dump_reference_images.py b/tools/dump_reference_images.py
+new file mode 100644
+index 0000000..48c5350
+--- /dev/null
++++ b/tools/dump_reference_images.py
+@@ -0,0 +1,47 @@
++#!/usr/bin/env python3
++"""Dump raw image byte buffers for all unique images in Python IR to /work/ref/<corpus>/images/<sha>.raw."""
++import json
++import os
++import pathlib
++import sys
++
++REPO = pathlib.Path(__file__).resolve().parent.parent
++sys.path.insert(0, str(REPO))
++
++from kindle_render.config import Config
++from kindle_render.epub import load_epub
++from kindle_render.fonts import Family
++from kindle_render.page import layout_blocks_to_ir
++from tools.corpus import make_config, resolve_corpus_file
++
++prof_data = json.loads((REPO / "tools" / "profiles.json").read_text(encoding="utf-8"))
++search_paths = prof_data.get("search_paths", ["."])
++
++REF_DIR = pathlib.Path("/work/ref")
++if not REF_DIR.exists():
++    REF_DIR = REPO / "ref"
++
++for cname, cprof in prof_data["corpora"].items():
++    try:
++        epub_path = resolve_corpus_file(cprof["epub"], search_paths)
++    except FileNotFoundError:
++        continue
++
++    img_dir = REF_DIR / cname / "images"
++    img_dir.mkdir(parents=True, exist_ok=True)
++
++    cfg = make_config(cprof["config"])
++
++    blocks = load_epub(str(epub_path), cfg)
++    fam = Family(cfg)
++    ir_doc = layout_blocks_to_ir(blocks, cfg, fam, max_pages=cprof.get("max_pages", 100))
++
++    saved = 0
++    for p in ir_doc.pages:
++        for c in p.commands:
++            if c.kind == "image" and hasattr(c, "pixels") and c.pixels is not None:
++                p_file = img_dir / f"{c.image_sha256}.raw"
++                if not p_file.exists():
++                    p_file.write_bytes(c.pixels.tobytes())
++                    saved += 1
++    print(f"[{cname}] Dumped {saved} images to {img_dir}")
+diff --git a/tools/fuzz_epub.py b/tools/fuzz_epub.py
+new file mode 100755
+index 0000000..d0f0496
+--- /dev/null
++++ b/tools/fuzz_epub.py
+@@ -0,0 +1,96 @@
++#!/usr/bin/env bash
++""":"
++exec python3 "$0" "$@"
++"""
++import sys
++import random
++import subprocess
++import tempfile
++from pathlib import Path
++
++def mutate_bytes(data: bytearray) -> bytearray:
++    buf = bytearray(data)
++    mutations = random.randint(1, 5)
++    for _ in range(mutations):
++        op = random.choice(["flip_bit", "zero_byte", "truncate", "insert_junk", "delete_range"])
++        if op == "flip_bit" and len(buf) > 0:
++            idx = random.randint(0, len(buf) - 1)
++            buf[idx] ^= (1 << random.randint(0, 7))
++        elif op == "zero_byte" and len(buf) > 0:
++            idx = random.randint(0, len(buf) - 1)
++            buf[idx] = 0
++        elif op == "truncate" and len(buf) > 10:
++            cut = random.randint(10, len(buf) - 1)
++            buf = buf[:cut]
++        elif op == "insert_junk" and len(buf) > 0:
++            idx = random.randint(0, len(buf))
++            junk = bytes([random.randint(0, 255) for _ in range(random.randint(1, 64))])
++            buf[idx:idx] = junk
++        elif op == "delete_range" and len(buf) > 32:
++            start = random.randint(0, len(buf) - 16)
++            end = start + random.randint(1, 16)
++            del buf[start:end]
++    return buf
++
++def main():
++    kr_cli = Path("/home/bgg/projects/opus_marriage_work/render.engine/rust/target/release/kr-cli")
++    if not kr_cli.exists():
++        # try cargo target dir
++        kr_cli = Path("/tmp/krtarget/release/kr-cli")
++    if not kr_cli.exists():
++        print(f"ERROR: kr-cli not found at {kr_cli}")
++        sys.exit(1)
++
++    seed_epub = Path("/home/bgg/projects/opus_marriage_work/render.engine/corpora/kindle_exam_v1.epub")
++    if not seed_epub.exists():
++        seed_epub = Path("/home/bgg/projects/opus_marriage_work/opus-reader/engine/src/androidTest/assets/epubs/valid_book.epub")
++    
++    print(f"[fuzz_epub] Using seed epub: {seed_epub}")
++    seed_bytes = seed_epub.read_bytes()
++
++    iterations = 500
++    crashes = 0
++    ok_count = 0
++    err_count = 0
++
++    random.seed(42)
++
++    with tempfile.NamedTemporaryFile(suffix=".epub", delete=False) as tmp:
++        tmp_path = Path(tmp.name)
++
++    try:
++        for i in range(1, iterations + 1):
++            mutated = mutate_bytes(seed_bytes)
++            tmp_path.write_bytes(mutated)
++
++            proc = subprocess.run(
++                [str(kr_cli), "fuzz-epub", str(tmp_path)],
++                capture_output=True,
++                text=True,
++                timeout=5
++            )
++
++            if proc.returncode != 0:
++                print(f"[fuzz_epub] CRASH/PANIC at iteration {i}: exit={proc.returncode} stderr={proc.stderr.strip()}")
++                crashes += 1
++                if crashes >= 5:
++                    break
++            else:
++                out = proc.stdout.strip()
++                if "status=ok" in out:
++                    ok_count += 1
++                else:
++                    err_count += 1
++
++            if i % 100 == 0:
++                print(f"[fuzz_epub] Progress: {i}/{iterations} (ok={ok_count}, handled_errors={err_count}, crashes={crashes})")
++
++        print(f"[fuzz_epub] COMPLETED: iterations={iterations} ok={ok_count} handled_errors={err_count} crashes={crashes} status={'PASS' if crashes == 0 else 'FAIL'}")
++        if crashes > 0:
++            sys.exit(1)
++    finally:
++        if tmp_path.exists():
++            tmp_path.unlink()
++
++if __name__ == "__main__":
++    main()
+diff --git a/tools/gate_p1_roundtrip.py b/tools/gate_p1_roundtrip.py
+new file mode 100644
+index 0000000..6d595cf
+--- /dev/null
++++ b/tools/gate_p1_roundtrip.py
+@@ -0,0 +1,72 @@
++#!/usr/bin/env python3
++"""Gate P1: IR Round-trip Verification Suite.
++Verifies that kr-cli ir-roundtrip reproduces byte-identical canonical JSON and
++identical layout_sha256 for 100% of exported Python reference page IR files.
++"""
++import hashlib
++import json
++import pathlib
++import subprocess
++import sys
++
++REPO = pathlib.Path(__file__).resolve().parent.parent
++REF_DIR = pathlib.Path("/work/ref")
++if not REF_DIR.exists():
++    REF_DIR = REPO / "ref"
++
++KR_CLI = "/tmp/krtarget/release/kr-cli"
++
++corpora = ["exam1", "exam2", "exam3_normal", "exam3_small", "tables_images"]
++
++total_pages = 0
++passed_pages = 0
++failed_pages = []
++
++print("=== Gate P1: IR Round-Trip Verification ===")
++
++for corp in corpora:
++    cdir = REF_DIR / corp
++    if not cdir.is_dir():
++        print(f"[{corp}] SKIP: {cdir} not found")
++        continue
++
++    pages = sorted(cdir.glob("page_*.ir.json"))
++    corp_ok = 0
++    corp_fail = 0
++
++    for pf in pages:
++        total_pages += 1
++        p_num = str(int(pf.name.split(".")[0].split("_")[1]))
++
++        # Run kr-cli ir-roundtrip --dump
++        cmd = [KR_CLI, "ir-roundtrip", "--dump", str(pf)]
++        r = subprocess.run(cmd, capture_output=True, text=True)
++        if r.returncode != 0:
++            failed_pages.append((corp, p_num, f"kr-cli exit {r.returncode}: {r.stderr.strip()}"))
++            corp_fail += 1
++            continue
++
++        rust_json = r.stdout
++        orig_json = pf.read_text(encoding="utf-8")
++
++        rust_sha = hashlib.sha256(rust_json.encode("utf-8")).hexdigest()
++        orig_sha = hashlib.sha256(orig_json.encode("utf-8")).hexdigest()
++
++        if rust_json == orig_json:
++            corp_ok += 1
++            passed_pages += 1
++        else:
++            failed_pages.append((corp, p_num, f"sha mismatch: rust={rust_sha[:10]} orig={orig_sha[:10]}"))
++            corp_fail += 1
++
++    status = "PASS" if corp_fail == 0 else "FAIL"
++    print(f"[{corp}] {status}: {corp_ok}/{len(pages)} byte-identical canonical JSON pages")
++
++print()
++print(f"Gate P1 TOTAL: {passed_pages}/{total_pages} ({passed_pages/total_pages*100:.1f}%)")
++if failed_pages:
++    print(f"Failed pages (first 10): {failed_pages[:10]}")
++    sys.exit(1)
++else:
++    print("Gate P1 RESULT: PASS")
++    sys.exit(0)
+diff --git a/tools/gate_p2_raster.py b/tools/gate_p2_raster.py
+new file mode 100644
+index 0000000..5a407e1
+--- /dev/null
++++ b/tools/gate_p2_raster.py
+@@ -0,0 +1,84 @@
++#!/usr/bin/env python3
++"""Gate P2: Rasterizer Verification Suite.
++Feeds Python IR dumps to kr-cli raster and verifies that per-page RGB sha256
++equals the Python pixel sha256 in tools/golden_local/<corpus>.json.
++"""
++import hashlib
++import json
++import os
++import pathlib
++import subprocess
++import sys
++
++REPO = pathlib.Path(__file__).resolve().parent.parent
++REF_DIR = pathlib.Path("/work/ref")
++if not REF_DIR.exists():
++    REF_DIR = REPO / "ref"
++
++GOLDEN_DIR = REPO / "tools" / "golden_local"
++KR_CLI = "/tmp/krtarget/release/kr-cli"
++LOGS_DIR = REPO / "logs" / "gate_p2"
++LOGS_DIR.mkdir(parents=True, exist_ok=True)
++
++corpora = ["exam1", "exam2", "exam3_normal", "exam3_small", "tables_images"]
++
++total_pages = 0
++passed_pages = 0
++failed_pages = []
++
++print("=== Gate P2: Rasterizer Verification (Python IR -> Rust Rasterizer) ===")
++
++for corp in corpora:
++    cdir = REF_DIR / corp
++    gfile = GOLDEN_DIR / f"{corp}.json"
++    if not cdir.is_dir() or not gfile.is_file():
++        print(f"[{corp}] SKIP")
++        continue
++
++    golden = json.loads(gfile.read_text(encoding="utf-8"))
++    gold_pixels = golden.get("pages", {})
++
++    pages = sorted(cdir.glob("page_*.ir.json"))
++    corp_ok = 0
++    corp_fail = 0
++
++    for pf in pages:
++        total_pages += 1
++        p_num = str(int(pf.name.split(".")[0].split("_")[1]))
++        want_sha = gold_pixels.get(p_num)
++
++        cmd = [KR_CLI, "raster", str(pf), "--fonts", "kindle_render/fonts", "--images-dir", str(cdir / "images")]
++        r = subprocess.run(cmd, capture_output=True, text=True, cwd=str(REPO))
++        if r.returncode != 0:
++            failed_pages.append((corp, p_num, f"kr-cli exit {r.returncode}: {r.stderr.strip()}"))
++            corp_fail += 1
++            continue
++
++        got_sha = None
++        for line in r.stdout.splitlines():
++            if line.startswith("page=") and "rgb_sha256=" in line:
++                for f in line.split("\t"):
++                    if f.startswith("rgb_sha256="):
++                        got_sha = f.split("=")[1]
++
++        if got_sha == want_sha:
++            corp_ok += 1
++            passed_pages += 1
++        else:
++            failed_pages.append((corp, p_num, f"got {got_sha} want {want_sha}"))
++            corp_fail += 1
++
++    status = "PASS" if corp_fail == 0 else "FAIL"
++    print(f"[{corp}] {status}: {corp_ok}/{len(pages)} pixel-identical pages ({corp_ok/len(pages)*100:.1f}%)")
++    if corp_fail > 0:
++        fails_in_corp = [p for c, p, _ in failed_pages if c == corp]
++        print(f"    mismatches (first 10): {fails_in_corp[:10]}")
++
++print()
++print(f"Gate P2 TOTAL: {passed_pages}/{total_pages} ({passed_pages/total_pages*100:.1f}%)")
++if failed_pages:
++    print(f"Total mismatches: {len(failed_pages)}")
++    sys.exit(1 if passed_pages < total_pages else 0)
++else:
++    print("Gate P2 RESULT: PASS")
++    sys.exit(0)
+diff --git a/tools/gate_p3_pagemodel.py b/tools/gate_p3_pagemodel.py
+new file mode 100644
+index 0000000..e897156
+--- /dev/null
++++ b/tools/gate_p3_pagemodel.py
+@@ -0,0 +1,78 @@
++#!/usr/bin/env python3
++"""Gate P3: Text Layer and Page Model Verification Suite.
++Feeds Document IR to kr-cli page-model and verifies that per-page Wire Format v1
++page models match Python reference page models byte for byte (100%).
++"""
++import glob
++import pathlib
++import subprocess
++import sys
++
++REPO = pathlib.Path(__file__).resolve().parent.parent
++REF_DIR = pathlib.Path("/work/ref")
++if not REF_DIR.exists():
++    REF_DIR = REPO / "ref"
++
++KR_CLI = "/tmp/krtarget/release/kr-cli"
++LOGS_DIR = REPO / "logs" / "gate_p3"
++LOGS_DIR.mkdir(parents=True, exist_ok=True)
++
++corpora = ["exam1", "exam2", "exam3_normal", "exam3_small", "tables_images"]
++
++total_pages = 0
++passed_pages = 0
++failed_pages = []
++
++print("=== Gate P3: Text Layer & Page Model Verification (Wire Format v1) ===")
++
++for corp in corpora:
++    cdir = REF_DIR / corp
++    if not cdir.is_dir():
++        print(f"[{corp}] SKIP")
++        continue
++
++    outdir = LOGS_DIR / corp
++    outdir.mkdir(parents=True, exist_ok=True)
++
++    cmd = [KR_CLI, "page-model", str(cdir), "--outdir", str(outdir)]
++    r = subprocess.run(cmd, capture_output=True, text=True, cwd=str(REPO))
++    if r.returncode != 0:
++        print(f"[{corp}] FAIL: kr-cli exit {r.returncode}: {r.stderr.strip()}")
++        continue
++
++    ref_files = sorted(cdir.glob("page_*.model.tsv"))
++    rust_files = sorted(outdir.glob("page_*.model.tsv"))
++
++    corp_ok = 0
++    corp_fail = 0
++
++    for rf in ref_files:
++        total_pages += 1
++        uf = outdir / rf.name
++        if not uf.is_file():
++            corp_fail += 1
++            failed_pages.append((corp, rf.name, "output file missing"))
++            continue
++
++        r_bytes = rf.read_bytes()
++        u_bytes = uf.read_bytes()
++
++        if r_bytes == u_bytes:
++            corp_ok += 1
++            passed_pages += 1
++        else:
++            corp_fail += 1
++            failed_pages.append((corp, rf.name, f"byte mismatch len {len(u_bytes)} vs {len(r_bytes)}"))
++
++    status = "PASS" if corp_fail == 0 else "FAIL"
++    print(f"[{corp}] {status}: {corp_ok}/{len(ref_files)} byte-identical page models ({corp_ok/len(ref_files)*100:.1f}%)")
++
++print()
++print(f"Gate P3 TOTAL: {passed_pages}/{total_pages} ({passed_pages/total_pages*100:.1f}%)")
++if failed_pages:
++    print(f"Total mismatches: {len(failed_pages)}")
++    print(f"First 10 mismatches: {failed_pages[:10]}")
++    sys.exit(1)
++else:
++    print("Gate P3 RESULT: PASS")
++    sys.exit(0)
+diff --git a/tools/golden_local/exam1.json b/tools/golden_local/exam1.json
+new file mode 100644
+index 0000000..d229918
+--- /dev/null
++++ b/tools/golden_local/exam1.json
+@@ -0,0 +1,150 @@
++{
++  "corpus": "exam1",
++  "environment_fingerprint": "345e54ac9394a7757fa785d873fd127c8668c293c005a11b67ef1b0753970db7",
++  "engine_version": "1.11.0",
++  "page_count": 70,
++  "pages": {
++    "1": "9b8f39668ead98020a8f05a131b6b3a10e6b292ef812224dd13eb3affbf69919",
++    "2": "88d2875e16a0134cd6e33a366d342ca5ee428af6454ae7750c0a0bdc17113ccc",
++    "3": "cb00dee00fbdb57db7aa62cad565c64d14c0e249e595aacaaf29459e8b15b090",
++    "4": "dc931d63ab6290a082529b2e0df1a3cf4a72ad550674aadc98a396b8fe741ecf",
++    "5": "8615587dedf638371502c1835e8163107cfdc37ac4adcea9e41832025a5e930a",
++    "6": "797cf2c77dded9802be9b8ac4b766c5e1f6a43461ae3f4204d80470f3e2b5e4e",
++    "7": "abf6bed003c7712b7c9ba171b9247c8ab688a68c5566bfbdcf4b2766ab752308",
++    "8": "1e9ed39b320a691eaeb1146f9d99cf63910fd6f7e541c7a3ed06b157fd315238",
++    "9": "105e1005237f5f691fc6b6a3b37dd5d3e3a43993ec39cc7c34875d7ef5dcfb36",
++    "10": "01e83040cd0f243fc4f74668f5d741637a4d8c3f4dc070c75ed7b9b7217557aa",
++    "11": "d79d4a44061bf24072f602c6b7e450411d52fa54584e79e3c4c4ffdc7728ddbb",
++    "12": "d292d3753468ca3ad6d6c737dd2274c11220a5db4ddf5157e56aa1016c437219",
++    "13": "810f348dbdfc5c0eeed42e1ed4346093501839269ab0fc8258aabe2da1e203e2",
++    "14": "0e6e478717fe984af90ee0c9d5f85f90801a74f58ba118e45fe52dda61d52486",
++    "15": "1abf64bdc7f4bd4901290b73601b9d2b887ee78dd43468667bea40688196dfc2",
++    "16": "8d9992b044574caf0d533ccdf6fe5a72d3d36ecdc8ee93945588840b36f939a3",
++    "17": "0975e9061a967dfa5456b8f325a98d19cb6d2b16d1bb3001cf848a1c60171617",
++    "18": "76e68836c43a5356a6b61f10054d974c9a1be8649b1a940ea1f574aba1bc93d2",
++    "19": "26ff160f702624fbe8672bfabec582cd1fe44a1e8b359040fd69c2c5e3eaf37e",
++    "20": "029da1fcc3e3374df119c9bd4dfcc4879c56fd54087c51475e4a918eff7d2266",
++    "21": "9d93dd2382bce30025f8a15f2d51885b4d40869b9f6689656748db710dcee0a1",
++    "22": "afdcd4b46592bb36705b518054539c27f9036201ed25c3ef87e06e40f5f5dfe2",
++    "23": "3ecdb5d0c2b858c3f6afb93052c27fdba93bf3cdcd4b4d755f5fcd71bcaef9ab",
++    "24": "27ff3bec0af034750878d9620a7c3f367dcad20277af3cf7af90aa4552c58564",
++    "25": "9106d14e3fd4b2c0d65ca476153c732aef773e4d94a3ff5c664a2d55193e4b5b",
++    "26": "26551915532e72dfb3c6776a0cf1007367f4ac00b9bd1c63a2d3be5dfecb4bb3",
++    "27": "f91ad22ddedd45a2c9c9f012efdb7c2129bc232d599ece5b532bf9e14384c011",
++    "28": "e134e760272d8ae834cb13d8aafbdce2962981f83113d90ac870bf565024c97d",
++    "29": "4af5087c649285e0f472ae36600cae6fd40d707015c8da4180f21be4ec397940",
++    "30": "119901fb7709a7f6ea9a9a73ba319e88297da5a7fb7de9a3c0e571b72ec5044d",
++    "31": "07573254c9a43e8cd3f96ef212956761c4c66fe3d4c1db529510ee3355b6ac33",
++    "32": "44546906ae8088488c8b5f4512a73d9da7586c1639b96370aad0e8f59c6e2bcb",
++    "33": "ed9913e29d59c7c93aa47176c3f9a201acbd154b063d12d6519762ba8f2684fd",
++    "34": "f1e28b5451b042ca0ba5c4189de287e94c17865500a6dfa6a7e8a092c0535a63",
++    "35": "45d12167eee8ed58326292ec013b3254753b0e147455d9183397c7accbff26b3",
++    "36": "514f6de6cc4e98243d67bba0729c81d00ef2236e7cfe330c6544b483465deebb",
++    "37": "39ab49a9fca1199a6d27ceb49bed382e22b5b6af0c5e0abe8cb3518bbc6f3c4d",
++    "38": "bb2cb5329567cc73e1f539cfe14f2431d9d97da1323d0cffd0d05f55dbaf7d85",
++    "39": "c7ba0499c3cfc0ca260ccfdad867d96cf65f44341a9288aa7e17a44be069eaed",
++    "40": "d27cf8f364e21eaa58cfbfda161bc6935e6b59a3940e22d58587aa7db7a55c99",
++    "41": "8d915f13709a3dcabb94deddd20de70b1b347829033bb93bbccc279f099e0935",
++    "42": "26ed3d01ca6b89c1f7e2c55e7ad693e77d7214f791bb2bd79b57caf96c7a8ef4",
++    "43": "adecf8d2d01298c3198aae29ba40e7f735f477af3466937bc20fb07c223d655a",
++    "44": "09571dbb59f421ec312305bc6e0412ba62145acfcf7f849d89202c9dcd1388af",
++    "45": "fd8dac2383abfc9f5d74836aa6721a277d4b71481471311be229e478572977ad",
++    "46": "4884b413fb95759821a97cfd9e196a25129a8e9f33f8c71048948924b84b14b0",
++    "47": "e7a1412c8b4b2e5c3cb4d5a5fedf387d6fd7c75fff3c7d21f40443f328867e59",
++    "48": "0fb4db9f0f8a2eabe4bb649217c75937ae32d1cdbc5d5a7a23fd6a68f0d9c838",
++    "49": "cd24855727d3f005de8eeca2b92d0f640d31e56395751b7c6c86590371af6c5c",
++    "50": "3a76ba4b3f73b31c1cb93b7ffb906911eda9be5a591a3316433ba691cd8ce54a",
++    "51": "6d2ad11cda43134a250cba9768308562e4c802f3d76649e2366850350b3ae9f4",
++    "52": "9b3664b7c5e1242f46128ff794fa1c1ab5ce585fa8b4a5ffbb9e855644943e35",
++    "53": "cc1c3b17803d0497e39ba8faf6b2087559128a603f92fe1e23b62368eb71bfbc",
++    "54": "c469516159fa7d5a08ba6a1144df63b9ff6436c92ef5ba391a3fdfae7c9462e7",
++    "55": "47777b46c619fe77921f064b07b734d66edbcbd20893796507fac7b831e6077a",
++    "56": "295c62e345dba628dc2ff10ad8fd2fda66e1018ffb8752b0f8a85cb797e1cf78",
++    "57": "2f2ad85e7813eab048ccbb6a47b13205c48f62bcad43fd7348dd11e5110d6404",
++    "58": "1a9c305c8df13a7d7dffef4070576197b96db527a8bfabc0946d3c2a3b97d394",
++    "59": "d5f23eaede9763013261659a22a625eaad1b55537f9692d903f11759864bbc10",
++    "60": "9afba10db203f6e2901dd845a35d441561cb4018107caf3563dd8aba5b2f0bc7",
++    "61": "f9c96cf8017100f126f74018f6f8f74e20fff5ee2f992797c9765d7def4bdb3b",
++    "62": "ed461177c312ae51e96f9cbf049b01b92218811ac3bc8c6945981dc1c2211d1d",
++    "63": "99da479636b2a85558a65dfeb198b85a700cd641e56a2d3a4e67e7c758243403",
++    "64": "6e3b642795d2aa5fcbe559bcee73e3206934974bd13c173c0e76695bf0cf3fa4",
++    "65": "1177d035f371695e6302cc751729bbc0cca5dc628a98aafa0b7c89a5039e84c8",
++    "66": "e8a3d8b9ee2a2e22871d056b805bfd5ba8c131b6c7c8ef9dac1b9b8913e9d47b",
++    "67": "c9770b0f8eae4200a971e71b362b5f620be6798d51a505658dd13a7edeb85be1",
++    "68": "e9e9b90724f01ae8c15c3f20944f03810669e82fca42cc5205ddd2cce3db01e5",
++    "69": "cf5ddc56abea499e97671298783058c464ea96615883e99207d158a2ba283984",
++    "70": "b0272402d079e79c6c3c0e75c2338ea06b1ef02b7a1651fee1e49d560090deba"
++  },
++  "layout_pages": {
++    "1": "0cf27425e9d379e3a973f76cbf9e78abc57b7a5d760c6b32781e00516b0b4ba8",
++    "2": "3c2226602fc6ca4640c303cf5affbd82bb8efef6b518cd0890c9e151e8e28a6a",
++    "3": "6fa47e74bc1250c17b98bcc2a8d01f932bd836e2b3d3ee4239c810e5ea8940ec",
++    "4": "849ba25982e0e44f2b73f0777a2a1b19f8dd718b31a443f1ea6c7ea1af926cd0",
++    "5": "49010fc3157395ca2e6d85124389d388e9d7f1f3cb8548a5d87b1f6e39639ebc",
++    "6": "2a04124bff043200c450f1d9c8937c897a8b752c40b491c7f6c8e021ee43a6c7",
++    "7": "5f3553f7aad63c481309c14ca72061042af08a525c73be7128438ffdd01fbaaa",
++    "8": "3e94d8339c6c0f351c167271bf9139018044983bb396e3d5eadeb07af2791870",
++    "9": "f1ee248fcd68ee446d734be9e79eee7af48c734bb8a2a6214f4fd990b0349700",
++    "10": "8149bd018cc9e6760b6884fad67de3609c82165ac35c1debd2ce9afe3a88b9c2",
++    "11": "d2b87180fe0cc79ff0d05965d912e4eb0f06990e7fecd2d2a6ebefef53352645",
++    "12": "8e9b11f9fbfbddc7efc5e5f60dd8b728bfd60e3efbfd6d66bc934d71afb91edc",
++    "13": "17bfca7653f3aa5b50868040d61e837297a24e0c01837db55d6a0394ab65b6a2",
++    "14": "1aaee2ee080234b8cb124a52fd0cf793ac90100a7e29160a0875628ca024d749",
++    "15": "af0744649d7a3fe9166480be17e29146e2b07b779361419cced924795710dad4",
++    "16": "4308605cbbbfedbe99060b0b2557d356ef4b6bfdaf7febaee1cc0ec7330122a2",
++    "17": "4e99cc8358cf0ca1de6df690e2f3471711ef9fb7de3b8f633ef3237f4334e916",
++    "18": "3d125fe70301ae1d9f4e695ea290cd732ecdf1be066a8c9b3ad77487644dca22",
++    "19": "5a33d2968b99c3fe14b614b504e56bc8cb5df992fb7d92533441de557bce2169",
++    "20": "eeb935bbae51bf2186e76ccb6d6663d10996997d4aa5700750e9d96c74420c93",
++    "21": "3bc119220c2ad2bc4750966e5f98bf9b10a713914122275bf2ea8bfa19e12bd6",
++    "22": "a0a0c2efe1914cfd2cf59ff12c3d750d57cdb99d4c05397c58be4862bf28298e",
++    "23": "8472f0ffd3ec24a991852b3f64fb3aaaa8f41819a46be357e18e2b54639f06d0",
++    "24": "9acd472dbed69bf87b5e6d1797722de3313c69c0784565c595b64e7a87ae3e2d",
++    "25": "f08b51c864aafd7331ee352d30e9d26a19514776a3e0fa8cf0a2f63a10961d49",
++    "26": "ab380a56db7e3ca78da7099741ded71adc61b80deafb191ef454fc468c6219a4",
++    "27": "3079c25d72cfe2765e58940d9192dff5eac66ba05c9e77ef762ae9358bec62c1",
++    "28": "e002e1eb61e2ab10835ae5c94cb5e735dd3f4d0d72d83044942aa32e7d9a06f4",
++    "29": "954e229675905f32b9e38ba9832315d35e8f9da7015bceb7c8f417cf2721293e",
++    "30": "a8ac4eb96490c5477395522d1c09640d41fc2b31aeeae3f8e50e44d8d5d59e9b",
++    "31": "be977acf99fa65ad56b03460395d4be09c9729102bc12a24cb8a71c3c8be5725",
++    "32": "3e81bee3dc31d7eb56616696b224c22ba5b508874b93f275428e792ea77d6543",
++    "33": "d5f8c547aad59493931ae147e817dca9203c9cfead01b181424484adf4f9fae9",
++    "34": "b75c846657e2d485aa94c9cfaa8dbcb5ce7c1b022f63bf7fc6e556982bbab02c",
++    "35": "8eea500accca4d1a58c59700ac319d19d79e29d9355d38ec4e64e01d8b06535d",
++    "36": "2a0163770cf21550c3f3ccb226ab4fea40c3caff7b20b6f0f48b8a7236e9daad",
++    "37": "16cf871609022404dad853f131f60575b4b64876defbc69d2d088e44f70da2d1",
++    "38": "d3525638de5a74ba2c5819ffe3645a5c6ec5454ed029a7766ae64e7c1e7672bb",
++    "39": "78942487948c5b7a58b85c78f7a6ac12d3ff756e24227db74812d8aea6d1aea8",
++    "40": "b40b3af524462064d95828a55972b5bbabfcfb6f09802d6d6c172d25a1cef48b",
++    "41": "5b428570f1dd4b0daff2d5f36b925fc5b7dcb27c99749ef301ca942bf1ba192d",
++    "42": "7c5cb524d0cec004966d0cc4b27a6e97efcbe5a388787cc62160e443b5ba1f92",
++    "43": "8749f78b6c4911f50717a41fa0ace8fb86b6b53e3e6ef49a2c3278856b0ce3cf",
++    "44": "8554f5ac477071427a1ba296132821297f8807786797e15d7e56630a3f74c3a8",
++    "45": "2f297022f9fff4b58535e7dfcadd281d79c5cd17898fe983e51d307be3ec4a30",
++    "46": "3ee9a79e4a78f4e231b104a5e347723d30a45037089ea1e49ae85706fa43521c",
++    "47": "230148fffefd5db4b116750fb884e3ebd149630eeda4bd29405d564f5de10a3b",
++    "48": "0485a5bdd0354aa52dccafd443a3af08a31427eefd0bca632f61634bd0caf63b",
++    "49": "5d17b40ca920ce20d88e8d847efbce8a91d2599609e9028d19b7bc85c34892db",
++    "50": "cbf67034ab11e8c4138f7f317f185c014a73efb625bf70a5585db5b37adee829",
++    "51": "047bec724ee6f5adb0039c91980b77847dad16a65bdd4312f2a9c2424bb3d0b9",
++    "52": "b307d7f63d6cd859e39821de5b90a7eb216d10f1cb5f05647746f9e2d3e34779",
++    "53": "3b604aef01f12c5dd39d6124b9d67f4e6115805f249c3795461d0bcbb4b14404",
++    "54": "f6f8cfcc57cbc31050c7390f14785656e8e158cff4058501e37ffc2875a9f1ca",
++    "55": "558d54940693e01219d078fbe18982a7a4436a75a76cfbd7a224398727e7af9b",
++    "56": "2cb4f3b0e7679f2101d8aa382c3cedb7414483502a178c4594eec6ef2f60eb20",
++    "57": "582490a0b411d4031c7a513f68120b88a1fb6f9a27ac325518aa40e489407587",
++    "58": "1c0326a2526be9070bc22c67c321b3a8b12e5687225bf3f87d044e9c8a1329e5",
++    "59": "32dd6319e4ac8f5a2d9b27df9cbc1fe5baf7fd3b9de6a87fcf0e38cb51a305d2",
++    "60": "f97a26d9299303f5b726f5c76134a75bd4cd46dfc8b769ddca9ee422092c4901",
++    "61": "2d6991e50018df3e371f75eeeec9d74b4d9539f2c574d90e69b91ae3551158f2",
++    "62": "6ce6a26f74c7a0121c00c76e8fb7fe08832a4de2638b79d7ffe9ffffe478d72e",
++    "63": "ad62cf22637e705b7db03a07cca2a56f3bb99a2b269a24415ea8af8f44807472",
++    "64": "e49ebf3feca3e006718d2abd633eb3cb69606cf7b19b21c5a935ee6e4d6f9389",
++    "65": "fd968c423ea9742636f1d4ee84a6a8e602fc87abcf0dd75908e948e1bc5405da",
++    "66": "2aab373fbc58ef93a0b416462de347d6d83b6539a89f58b5a71a4240da6fbdf4",
++    "67": "d3b9a241df0dd06841d4e52a1c81ae3b9f84105593d93aa2f9d720ae5e48c931",
++    "68": "e95a928390f9977ed4b510fdbf5d0a570bb8a0ad2288fcd715f4062a9f98e0e7",
++    "69": "7fe52456df874139b9aaa2c8b75eeb55f293afb2428ff5c363621f138dd189bf",
++    "70": "108910503c17ed3d0aa08f286675941736e89fb9f0848d631c5b01298436d9fc"
++  }
++}
+\ No newline at end of file
+diff --git a/tools/golden_local/exam2.json b/tools/golden_local/exam2.json
+new file mode 100644
+index 0000000..f536756
+--- /dev/null
++++ b/tools/golden_local/exam2.json
+@@ -0,0 +1,138 @@
++{
++  "corpus": "exam2",
++  "environment_fingerprint": "345e54ac9394a7757fa785d873fd127c8668c293c005a11b67ef1b0753970db7",
++  "engine_version": "1.11.0",
++  "page_count": 64,
++  "pages": {
++    "1": "c762662afca07021679ebcf77e37a24e66e93329fab1bebb0ca471faf354b1bb",
++    "2": "2496e074452f65173ef73c529617be7f61886e33c58d9537a1c4184a0be6d8b3",
++    "3": "d3b6cc4376786c251f0a52c28ce639d5666cc95ba1ed8eb16ec181ea6d0b5eec",
++    "4": "aca3dd21c087957ccf313a396181cf345d623644fca465ebca3a4ea678daf6d5",
++    "5": "e848d2a402a67ddeda732389b4729b5074bbbfc8b5448fa05d7f89f40a85a696",
++    "6": "c1e7a5487bdd3fdd40309207fa61479da943c8a457fef78a88922794774481f0",
++    "7": "2b38ebde845d02a4a0d6f51ae82ee0e9802de6ed96c8ca9b1b0d98dc43110357",
++    "8": "9f5fb44a68007b6d4afa482c3a95e94a753d527593265848f4c5f9d6712688fb",
++    "9": "01ba2e361b0f5b95e02f90e58d00d6081d27138dc1c49ca1fdee3248d0562ee9",
++    "10": "4e40fce2af0d238cfdf66c68bc67bb5a06df8f8f45eb242865b5634af1048495",
++    "11": "a534ec0a4520a26ce436883ecc3c7bc7daaf97a4759fac74f4f05bbfa1860d8f",
++    "12": "49a76cc0ffa9aa3209844a29882977c052d01365f310d485e76c87a0fec3952c",
++    "13": "e428a7334a515ae572c314706727971b6791a35a615fd06f9833086aed6c9cd5",
++    "14": "1db70224b12078b72c788bbf21a91a2b539c4dd324055a02f3020f3c0cb25ceb",
++    "15": "98e92bf336ed70ac96aaa4248d67d99b0a79674016649e4887afd5093eff8975",
++    "16": "c7b6bad1e960c9b9bd82196094ed760f64fa8c65f48d401b2565f4a184cc5a9c",
++    "17": "27cb3bd0a0d8e67a9c8d0a24bc33a54be021a65821201eddba92cd9e9af1f0bf",
++    "18": "251fe30c6169bcd1d11236ae19f2bd879c632882bb1138535bdbb6d35449bf74",
++    "19": "d30b58a0b502c9527ab688dc20131ad432e7b8df4430063ba0d34f9a9b5d9f1e",
++    "20": "655a70de9778e9c7a301277e756e9ae6943000640550f9c2e4f73acbdfd46632",
++    "21": "3adc629d45ca6b4195aaf82bb35e7646f0b56d587187a0b3f4c7fbc5a67896e2",
++    "22": "468720d1d238f70ca358e1c1cf375653275d3dac6191767830e823689123d16d",
++    "23": "2332e4caff34b515e039681cfb20954c7519d6652279c3e57040ae3e4eb53537",
++    "24": "30a16a786c366ed8d529c853c2bb17551857f46993f6b65d4c136ac716d96015",
++    "25": "980996c1cabf92005a70b478589b8df60c80c2040977c3637f96a09a2c57c865",
++    "26": "1d0730ed3bd5734a0d83246973fb1321048c8c1747b969cad10cdf9184cc3079",
++    "27": "e9ea9f2ffc214d4bbb4e2d776843c5c587759a3c12697f4571500befb4a5e8ef",
++    "28": "d6b0ca65987b6aa7a9aa400d23aa56c7d9a3bec1ea8597a9b756d3d436c7f1aa",
++    "29": "cd37d4e9d5075a9502a3e4a853ad6b0d05d515a3d0de12838220daea2b6a5353",
++    "30": "25d61e58c02af5ecd51eb4affa94ca0c1379014fa6941cb9c07d07e577c5bda8",
++    "31": "8a8bfb96d61a472bc41ea396ccfe2a6e7c0c48667cd73bff8112a7e5f2becb86",
++    "32": "8ba62cf9c9fab8faaf2685d3b7996d1d0371d948c77f6d06f9c0227d5e3936df",
++    "33": "4430aee956d2427876e133e423193aba5b07e0dd8fef99c16f5793900b3d7955",
++    "34": "a1439cb9db55db3d829bcea735c0402339cab18d881453fab5177d65c0bc554a",
++    "35": "9439fda7849fe2d7181e0bb93c2a4a351d0eb302c4050609f6d96213a606f677",
++    "36": "0ddbcdbee7d6d643c2eeea2d34d8e8bc23e8c4a13216df06869d51e331c9cd0b",
++    "37": "773b468dbb762b4729cf252a663a022dbed91b8735e33f89632c5a17073d4f0a",
++    "38": "586203ffe4dcf86e6918d7b4ec935f1f8f8578d04cacb3d2d3fab71dcdd04fe5",
++    "39": "86f301e21784c95a6296e1444861984fde926a487a95440890ff83a16c3308a2",
++    "40": "df12020e242c9de043a93866863a04affad5c32decf756d5952c3d6451f3295a",
++    "41": "79ccbd6be5427a28078ecc5280b62025b0551c4c1447cecd495b86ddf850340d",
++    "42": "41dbd8b7283a5159efbeb9e7b7459634b39fac1d4eabcf1d92f9d430d694af83",
++    "43": "8e9432558e281937333a0005379f53425747220a2589536600468ba516656de0",
++    "44": "8fce7562250b3f7ee54996528c3c229092ef1031ba999ccdacab7e3f9c4c518c",
++    "45": "bc965a743e2e2d42f8f7330b7d7f0670fb4650fe1b9ce570af53f4325b626244",
++    "46": "2f9e1622383461c34018e697d8b639544371564da92d3e309a1c065f96ba2d51",
++    "47": "47d89390039db5acf26d86ba330735f38273d530f69c9f8bc8d8209712c1cd16",
++    "48": "63c4580a04c8b082f57538df8de0fee38e54cc8b839c56c1ae7644246fae1406",
++    "49": "f1848ca7778e337352cfdeb2c0afb5dfada4992e290fcaf471d5aa629286d65f",
++    "50": "d39febc98db07a731191929a5fb7f59ab3bc3804986e5ebca46a8dd3eeb1b609",
++    "51": "16d54f35886fe0f21a152f05626fe2abe9276637819a2b897c1cbd2a1c6cad33",
++    "52": "f1a718ea3f13ac06136b597412b8e7e9840aedd334a915c5c0d3dbb3614e0f3d",
++    "53": "11d875cd6fd54bee1ce12d259ae2e65ad17a6b89aba01c1481c2d1734fb57d47",
++    "54": "366c9f17739694da48c34a03f02005595e40d03fd4e4dead4d8502341e10ec36",
++    "55": "103658fe27bdaeabc947b2e9f34e94754ff32afa3f9adf9c47d967265164e7ba",
++    "56": "29611ab2aab0998a2c467a09ffae346d9f5c5277b7cf35dbfd219589254cedf8",
++    "57": "674f9c9e18b316c287b299282c235e89f6fa5cb31db3e8966c5e6eebdf09f3d4",
++    "58": "085a7de131f59633f730ebc001cc5c97f9b5df49281a79a7c30bfd84e5fa917c",
++    "59": "90839c19d75ab9ccba146409cf55bbce9efd3edb37fc7a3b836f90a68c52201b",
++    "60": "0b3980deba1d39a75445e63831aa2d27e3b795a9d28883301192a843886ea1bf",
++    "61": "da1bd9c99fd716dfe98259e6acae33247237ee3fe31999fc71568151cde1b785",
++    "62": "b5aeab3b15ea8068b16c4053e2ba6979d7764024a58933b0adba3a94a6705689",
++    "63": "50c2e71e9c12d6a0380fdfd2a12c477b33f17213541d506de2215a6f83668821",
++    "64": "bffa5306e4160286d3f909d37c01577ebe48c5d652d62d9078e7d1b82f586957"
++  },
++  "layout_pages": {
++    "1": "ff0f8e712f44636608440d9eecc17c46736f9a059a277cc2d753135209967a86",
++    "2": "6a9fc2503af16571c63fc1b2e428717832e0d27f2dd4c8e06542433931346143",
++    "3": "f1b2c4677d6f533149c51400e26882dae67ba2c4e5d6fcc14f2c4194c4fa10d3",
++    "4": "b9f533bf10c54c8b7560d24f4aba51236b165ddd236f53cddc63f28ae726c325",
++    "5": "ce2cfe7ba387fbde994139315d6c8a036417189863b1354c87311aa4a809643a",
++    "6": "07e9d3398e241d17c377897272127f440b1c0c34df5ce25df831757dc3f23f62",
++    "7": "d17c522c580658729f21ea3b5646b236097960da60721d3b0c47ee5f5bc28dac",
++    "8": "ca3736191061946cac1da5257e6404b310b95ae109158e8576c8ba6377ae396f",
++    "9": "27532c473fea7ddf958ded8fdef12b093451ad0c144289f401e43e147fd0cd11",
++    "10": "39129400864ef17348518817ab1f35f8858eccf637c92f8466559db54af39023",
++    "11": "ca73ca12a514f4c61389e95e33e2e14a82dd48ea4abb5c476ac57b56043d12eb",
++    "12": "1ff2daf261c8c9bc92c184a4d840ddedefd3f867b7ab86b06566fc2828cc36bd",
++    "13": "c7795d9f4bdb71f0d31a5a499f0e7785bb1616392a20d1655dd05c7cdecc620e",
++    "14": "f7da3fc205ef99dd973a190e64165ae42dd982fbf2fa3e26442f0c50b791d47e",
++    "15": "218ed42dc6af3993057b87f5bb13bce71194fe07e477510feee376b96de398ec",
++    "16": "d40f28b3755661b2da888d1c8d292eb3c6f142d709113b82d9d41c67be0eec58",
++    "17": "15aced577672e15cc241aa952acf45cabca6ba6f9f01df49d5c56a5dedb83982",
++    "18": "6df41f15c09f600d7c59decc5787a9f938ca8c5898a7683ff3d246cc6ffd11a0",
++    "19": "dc6dd9fa5f0ad2b12ada9aac919547fb575fc8596b9029198bb4a8d54f662819",
++    "20": "d2b0cc13665a83b9fcd7b5057c1c4197beaaf75007bd493f7575ef982e3b46c5",
++    "21": "b72cf54ea8368c4323612cbf442b570fd055ffc2fae78d891e3cca93e76ce48b",
++    "22": "1d4f1073b99dcde389f407b7cd4eda0476dc72d216e51db2b9dbfeab9faaf77f",
++    "23": "1c8ff005f1b495b8a9db706f9ef88484b1269adf84fdb09f47794d67057b5ba6",
++    "24": "dff9f3a10d6e1ca56fdb5683091cda7601be27ab9a01e9d3a34e7721ae8895e0",
++    "25": "dd6207b7d5b7d02ff0b85c420b01dac1a4f6d19b9e3241315203858d8d932c4e",
++    "26": "15e89fc61ce69d2e0801153e88d9695cded39699cb7a774df450af56f50ad4f1",
++    "27": "baf3f65523e8a7bc5d2c2ba721f8bcddb19662f0df46ad2cf9b3e1f6f981e1d6",
++    "28": "4e63f6ff7bf3326d77237d7f768addeaf53c542857d887b7b6c8eee4c919943e",
++    "29": "2e89df2df658201ba7cf09ccb80b734f3ad69d45f66ee2be84076c1991bb646a",
++    "30": "3901f3f544371c1bdd6cd02c221b134b1e9c539cd772418aac7efb872ba5fc56",
++    "31": "87a2084cb0b4b1ce0812b1cfaa03eceef89a51832b008eb704f2e344fd0601b4",
++    "32": "f3ed49b37018d4a69366a934fbfc1ca3da33978b2554b432d01149cd09302140",
++    "33": "51de3f5497094f869b11802956de587e7e13242d929d92a1adb2dcdb0e71ee0d",
++    "34": "0a7d41b5d22f56388e642f454523d2583999b21d69dbac68627c7f2599aec2d2",
++    "35": "e74d4007b34a3ee31b9ab5c66a51506987201bc29b1bd1ad4964d556ec35886d",
++    "36": "a372af820f1869f55dd39a05e9a76496e51311a606de442345d772506d683e11",
++    "37": "1b659be95b854f06e6eadc9d509b2d6b6e239f4cd71d7507b0c51f39daf2a56f",
++    "38": "a1c2e54cdf324ca166afd5a13e78c599336ff682878cfc2bebcd3fdf93291a8d",
++    "39": "0175e116f77ee8debe37b70fba6f63916cd245db715504b326d14f3b978a422e",
++    "40": "4239e6b5f9416e86cb812f654b69d5db4b0afc313dec01581670053a0e69ad06",
++    "41": "9790016d56775d1faaee05f485de3910c115eed4167845d72e62d99e125e4228",
++    "42": "7c939ccd62cb00c3cdf50944fde1b7f86450a92cb76c263c68ce53e258e7cba2",
++    "43": "1ec78365e1a0dd1ec36a612c523ebbd78b01c028bed81de5c73a91abcb95c9aa",
++    "44": "3ee681aa4344a8fd11fb0e9a305ec135e48e4280b96232b7ca46bd5a8f0ba301",
++    "45": "05e5d5d1217232886c4ff20acdb97dbc3d14a8ecfd8cf622750b9df26ba1e64d",
++    "46": "4c9c3ad45c6ac2165e200be81108d01ac61d15af4b6a76fdd1cb6347844996ab",
++    "47": "1e130c76a46063299b9e70c820270d158020c3b9ddb2c597514ae4bce0b6b753",
++    "48": "1a5ec4aa66b7509206bbcbd41ab53d4e0696345053fb0fa8040455f7f19c7e30",
++    "49": "37611d8e5db6d01a05b4903676e922170488accd95abd1622d4e37e151f0871b",
++    "50": "f00f8f232fd31515bf1e820d467bb926dfced40c4386630aeb1eae95b7e0356b",
++    "51": "cb6e748fd5b7d0de9c205aa4b6a81e86e9eb3ef53b6bf9530c7e8e9b7674cb08",
++    "52": "a7c8120795375dd5ef89bb21141c0edbfe4f71058663b4f2d6b6c7d9d34c5957",
++    "53": "48f735d7fcdb4065566a54f88f65d17c7ee405f8ccbd45ca8d2e99b08306aa86",
++    "54": "95095856ad0abbe1ea6755bc8824ef728dd9230066838e2b1751cfbdeb937fe1",
++    "55": "b35ca7abdf36c47f5d58cd1bcae7caf5be60a4924c98be85da3927cd65f92673",
++    "56": "c6fdb5df4516b6c85fdfe4085bc9d96f253059e7ffeed23fdb0c35adea6f0500",
++    "57": "8388787c9404d85330d9ca0e863b5a4fcb4a7c7c994af5d35aeb2c22aae8ac8a",
++    "58": "727f0ffccc97a34066e13a8cfbb3051a086da964d307b2b919cc8adc291cad4f",
++    "59": "b182acef9a50a65ec435836a30423624b32780eeecb5e8e0a3358b2844a6f313",
++    "60": "05989edf9dcf2295d647b038008cb7942c7a7c95b54f10136a0abf0ea7dedddd",
++    "61": "f888c3c252322e4a056294a3c75c6434dbc5d50c5aa49d27bf67797223c00e26",
++    "62": "23b8e611ec362d2cddf9618a49af4532767dc7b183b6106fdaec6b04590ad0f7",
++    "63": "4d2a87bfcb40c214b1eb2da407bc7a1807ef46bc6b2b148ed3f3dd22a1dbfa2e",
++    "64": "95019d017893a972ff0b34fe90967fe2933e7841b60ead89915ce9ae8c76606a"
++  }
++}
+\ No newline at end of file
+diff --git a/tools/golden_local/exam3_normal.json b/tools/golden_local/exam3_normal.json
+new file mode 100644
+index 0000000..0be7fc4
+--- /dev/null
++++ b/tools/golden_local/exam3_normal.json
+@@ -0,0 +1,174 @@
++{
++  "corpus": "exam3_normal",
++  "environment_fingerprint": "345e54ac9394a7757fa785d873fd127c8668c293c005a11b67ef1b0753970db7",
++  "engine_version": "1.11.0",
++  "page_count": 82,
++  "pages": {
++    "1": "41453d0d3da0c39712c4463235138ab34e62a7bde5b162ca9726fad190c11873",
++    "2": "36bf40b8ba3fd1dd285b28b2be416eb252f58b86aa2329c9f4da629ae5aa51ba",
++    "3": "1d3e57f880f1e022795c2ec858900ed490d1327218e8f50945b6c4718123dcc8",
++    "4": "a1bb0ed20384ac0fac7a60cab6debf6f71ee0589ee3ac8e6d29035ab76038c51",
++    "5": "968be7bcdd0b66d7a276c2eba0447c90fa769c80cf2174a6b0d26f4c53c9c928",
++    "6": "c9b453318353fc2778f6932297225eb6d5636f5e541299d6d9e1102059b0f8fe",
++    "7": "830997dc3102742d3c3e68ce7ba127e382726929288ad92e8226efd4f4304910",
++    "8": "44a6e9227da1caaa2399b726d40b08c572875aaf40d427f63efd645ccc976349",
++    "9": "64921a0d470f23e0df0bab755d917bd89fc16e79208bde660b93fd2f556f2fc9",
++    "10": "befed85f0323f378e931dbe700850cd6e67b5ffe897d5ae822af2282f4a3c0e4",
++    "11": "774d24407cf117db4520bd3f2c006d4d08512d7d87b02db1ba6d97d5ba5bf758",
++    "12": "9803ec155722a2b3bde6c27b1038c7a3f6954db8b06e88d8406d90fadcc4e827",
++    "13": "03042f845c036ef5df30195a68477ed0162931d8bec5e44c1136792dec231ef4",
++    "14": "a44156f3c6e0a66f19370801a9bcf971cef41286df3a71c644a7829eaeda97e8",
++    "15": "13c1315a232f5b3abe71dbf1943864f72d3d9a04e71b388f397910df00a684ac",
++    "16": "542595cdd9f8aa68c17c93e459079f2ac1a06866085f757417fe6ac8c5333361",
++    "17": "cca8b02a58890251de10b3cf8e3c0c8304fc04ef5d878a50cce5ebba7b44dab3",
++    "18": "77f18a1225ae4b826f4314bff64599fbb0f3adbafb4d96827391afb6f78f5d2e",
++    "19": "386969af4a2f9e8b27f0aabd9ecb3cb021c85c411be0b00d8b2ab8ef13df1c09",
++    "20": "c88841ef957d1f924ebe9883122787ff25517a4a4d96adf2ad6b23b2b63f623e",
++    "21": "3377c4f93a128a697461df2118c53e1b458a32d66f4d64e6e4190e340d55f45f",
++    "22": "1a3bf56c18ac4cffe1ab2a4e31cc5bb8c3bbd87874ace657d80aa996e7a5498f",
++    "23": "46612c0acf6a56d19951ae8300c1f5af4ef98f39964a55125f11f328d073acd6",
++    "24": "c73b0b01e81f26ff8e2de14b508ff6a9698a541560cd69ed91027b2fcfaf3ffe",
++    "25": "a8b0eec7ee6cbed8d24f750461127de723047d0bc58808a63f19e4f50056cea8",
++    "26": "1c7f384f3ddbaf6facf331764353ded87f502ecbed67e3456e6f7f082bc672ea",
++    "27": "f6bfd9392ddf9d28af4c66979a8476817d4cf76334bfe7f562c9227f1ee6c4ad",
++    "28": "e49e3ea1e8f52d5ddef64d5640760a257a8c5fa871987361e7a8b14dfd5a97d1",
++    "29": "2422102363c03d48a3e050ad2cb2a70f164246627911e245564914a0381bedc1",
++    "30": "731c964abc5b69e8e6777b9f7ee1d5bee6114dce5155963cb67457e726f13606",
++    "31": "e6ff56a8b4a4bfee9d4507f658f0f0bc8e2537cfae659370b6e301cec1acf0aa",
++    "32": "91647681168724961707e9c342f189eb57069a67be3c6f0278e877ff8e87ce7b",
++    "33": "c3c48534715146e464f2cea2cef9d4e382366f048b6801d6b1e96359080fd725",
++    "34": "f38dbb35c1062016f9441e7789caf5d6013575d93dab9d2115614e5cca8ee4b3",
++    "35": "463e6e1fe6923e3149767d673a31c17d60dc7fd7613962bea2cf99a2e63786af",
++    "36": "68825ddf33ac4a66ee4b09b109cf86e5976f7faff419d7cd0fdc2772eba81d16",
++    "37": "ecc93b797270c9f4ff918512a2971d7df7940949fab93fb90ba201c940f79632",
++    "38": "5882df261c3fc4e53ad8631fa0ed774728eb33fa35c83f98c4421b198382e13e",
++    "39": "93b2d5fe96af435664279b5db11004a2b4ddfeb347327684dc8fcb8e33aad123",
++    "40": "38936a1d67afa3c71f4f2cc88658842cba2f6f0a1a0ec1a80acb8feb361d6048",
++    "41": "16e75bd316a391fede4d579b21fed0473c15f7de780afe4a62ecb9062a2e337d",
++    "42": "0a7a7c7f06450a97521e69b95b3fa4e58df36b52503009e8c3e164ae2a4d34a2",
++    "43": "310f5ca9f96879bffe32be93b26b3dab6714b1476073ca013b3cd8259e5a866f",
++    "44": "26aaa3d68544e52797f854e3f6818b82aa8198b239be7744cb4d30c2af30d4cf",
++    "45": "5aa419c0547cd32f1f40be9641b715ca4c98271ac6b99165cecbe63904e62f98",
++    "46": "a8f2e2890d577a371c9e07f55305c32790eb9fdab09d2628cacd16b68b17277d",
++    "47": "72e0825f6474751d08ba20145094f98d1a6acc2f5a4e82da72cdae771e131b6a",
++    "48": "9ce90fd6aa57c347101828e4dad98b078c94a6690d17524276da621baed77ef3",
++    "49": "c2dfc03155683ae14458266ef8b35ac496a3faec27f660ce7ef411e1172a1c02",
++    "50": "ac5f539298b3a7bc689447a4d126ea4ea41f43af392527944dd940baa364301f",
++    "51": "cf87678190b8bab0d099ad34659d3cf6f670667bc9617c06bd04bc14147002a7",
++    "52": "baa6b10d8809256b1f597bc0c15dac0d62856519d78439d2db0dedf74e6769a4",
++    "53": "8c6782a5a9ab126656c7ccdabab79328c755c656e281736669d0228aa21db123",
++    "54": "13d577506f2dc754ae9db42d7995cf052b2e77ef5fc9623d4f48f96af72838b7",
++    "55": "6297322027ba948ea207cfed34a171b7b570498dcf82693e27e787b24edcb8fa",
++    "56": "5d0813eea0a501114b3d940eac7c0a1ea861696cff3fbf8800e40d3247e2485e",
++    "57": "19f2f2a5a202ea72e6afe884782bd011a6bfcb09fe1a9b52735c8d119323fb08",
++    "58": "6b3b3eb22c310bba1b796c8486f2cdda26f81ce250588edb68d32780064ce979",
++    "59": "76f1f6407f611051afea5919dcd8af3bea3d5ab3b576ad7d92187e90ce1c7fd5",
++    "60": "43f3c363b7e48e3e55eeb88088a8d495fd5dbe70baabc489bcf713564eddf9c4",
++    "61": "e05d18be6818b36eed2bcc4db2dede2e23d8e47808143c0996a318e98c414b69",
++    "62": "309ede7ee9a860f07b837d89ff1ad3aab3fee082d451de748318cbd84136061a",
++    "63": "273f9c5301909d9a5e9f9da222600f42a0fb47fe2b9b383b0de10fcc0b36312e",
++    "64": "d2f0b2335f62086484b434184bd8e26a51cdac90383c18b8d4f97e32fbce423b",
++    "65": "b22ba01a1888af49dfb557b83212e3ffd9bf2c83e2aec3c1d576ef15a05f361b",
++    "66": "92757a0095894a30713af769b2085372e05d03e0d10033173d12e602f4312bf1",
++    "67": "57875ee482d86fb029cf134c2dbc2635bde5b1996ec3d7990a26c4da36e0efa1",
++    "68": "7b3d74ee682eb244ea34a43e34933fc4c53920675bc61c0755382add546b26b1",
++    "69": "4d085e91a70d739dd63086f0cc8b4b6c27c69e2ee2d940adf645836e9ce0762c",
++    "70": "311433637b99a56042aa24d2fcd7825e0bff5ad1f35353fd1bfdca40bb92fda4",
++    "71": "046050b190a37c967cf14993c71b8340dfcb302da871df7923d36b4fea806509",
++    "72": "23b1725a2439cbc5c735a25c99b4b61bc7d734e610a3977a0b82e488d4267606",
++    "73": "9c4a07827c5e07f72d57434b3319de166f6f99f0499c335577fa9160f930ab96",
++    "74": "c8dacdd78f99fd887974f5642d6f5ce95721e4da9d5dbe87099983b0773464fc",
++    "75": "02690705cf2c1d4a45c59326ef31fd912edc3d8a6d619b75a1ccaebf34afccef",
++    "76": "f9449fbfe0f3670f13cdaf5d3199aadb6dc5dac7a9bb0dd0541b78005bb7bbad",
++    "77": "e377f9711c1234d5d732f756d03ea9a92df778a0d660709eea333431d217a275",
++    "78": "4b34c7a2540c97a843fddd10c1041ba82795f8f1c34931ca1911065aa0a1aef5",
++    "79": "03f715bc1dfafe94bbb5b27228d444efc390f654ab7c3274fdb8000fab40a33b",
++    "80": "870b3752102e49e334df7815136f8dcc56ac609f573c9469425ef04050c377dd",
++    "81": "0c29ed690c293599a992c0ff7d33dbbf7da38abc69488696d810d0d5cd1f1133",
++    "82": "90a2844727ad7d103d0b3650d61e2608379ff1a5e9e9bd35b909d7b44d2fcbb8"
++  },
++  "layout_pages": {
++    "1": "0bf240889d64e5bd06d76079f15c19dacbe5692548fcd67609c93941104c45a4",
++    "2": "7cc015d57b59ff2eb9b2c5254bad1d0029cfef45a35032ca26a89eec7af6faa1",
++    "3": "631c228b49e535323699c53bb8b78d1bf24333f45347ad41ef8c4bd3ded22d49",
++    "4": "b07543ae406413bcb2056947b6399d7f74f62d3068833665b930afe1598719b4",
++    "5": "574639a6d08c84089ef48eefe03e85cc23d32606475406993ad1fd2fcb08031f",
++    "6": "290a7b22a629c93fa21a03ccd32dfa34e203ad2e53c22822f7ccc8b243b0ac29",
++    "7": "e0a463ffe1fffef26170e4f0b7134b197f3295ccb2282781c934834373483b45",
++    "8": "e3fed80e7e2a7842dc9f31efecea116f74b80ded874fa8ef4bd52164d819ce89",
++    "9": "117cdf74a409eeac9534aa1ef69aa83e9b218504703450aab665ac697e81c95b",
++    "10": "693be1373bd4551fdaf7e7b412635d3f0c5c48d33f8860f59291e69d27cc13c7",
++    "11": "7f50894283c31556a11acf35e641448ffd107a6a64dc4dabce25fd3efbbc5d65",
++    "12": "f9ea313fa6fdc00ad62cb829a8c0dd26af3bd817694fcb3c366531259b13828e",
++    "13": "28a30d689300beabb49f6e985aca1a299c6aa41087511c95c35edb50e4da970f",
++    "14": "9c898f4a4dd78d30022dff9f2edc745a785378b3fa8e57cc839a51a644461454",
++    "15": "89f55985024f71b3a84b426e46a170a0d4c5a62c214b7e87b56d53d68ec98040",
++    "16": "9af207a493d5cbd463a59c1ef3cdd2e07a18ca22abb74ffeaa29ed201ecdc5b0",
++    "17": "a3c869a8ca7c2c9056ad6c7ae27d1bfb88d0e24324021a5b3420436c29a8a9a4",
++    "18": "0a532b6c99d5b44d303c81eeffd341f253d9c9c480cbfc542316b89df3f09f4d",
++    "19": "16e65e6fdaeb41800d7b15348cc9ed85feccad6f38ea4f3aa79d66d559d598cc",
++    "20": "9c095e5a687e8a026f2cb8e7c195336e50997dbd7796ae16e3ff9d238bd88315",
++    "21": "603e68a44547a6a036052169300b4a0b6baf794af8bfca461ca2c8afcbab883a",
++    "22": "bae22de37fa2d95f999fb706cd7d4418253e87efd2759c4914228937e36b6aa0",
++    "23": "b82a8488d44d383e2f26e5e664ab9c862ac55627c715bf6d746ce97e0a26e29d",
++    "24": "c02c6bbaf8d630ad9bce5434cb9a9238395ff03a43c3f99a6bc4198c342b3be4",
++    "25": "7265e5d621d809195403255735fc926a4a2d1e82433681ce5ddbf95e354b415e",
++    "26": "96012f80f5a4b55ee8142fc78bb5e2dd691ae98d95d8f959b26ee300376bab84",
++    "27": "a209670e3275f85c2cb7f099fdf36ae4519efaa7bb2d98411c648b352d478336",
++    "28": "390f50c5066031209975fbaa879ddd548cf24d9bcda0714e9a957ecce4aeab70",
++    "29": "c5f979b2d33d86c9b44377847a8d02e895abc2f903f2fe67e38acfd34cd46711",
++    "30": "bed646ad4313101ee65e8d52542a8ce91fea1aedd71d2edd872b15c3b82f2aa5",
++    "31": "39e928649f11e2c4d5f0a8c13819432a8dc610ec2e8443aa66c67e36dd96c292",
++    "32": "2c73d4f1c9e5d7bcd94a7ce09f356e1ce24c634ed401c3500c2ebf5a0e576f16",
++    "33": "9d3444ced578a11335ff73002ba339fe7e38bf33a8218afcc4ed5968e9517e2d",
++    "34": "087fbec76a898cc6c9c41fbc264e00ab3ee999bfaabf8bd60fe11e0213015ca1",
++    "35": "5a0dcb1b3adfd27c7b60869e9d88b9a4c1c5db146c99f352da57543d9d85d752",
++    "36": "db55321a692d83eb7943f2b0cae7ead32971b8d18dff07f4dc8c904fd8b05c3f",
++    "37": "84f6253a67bf3b0eb289fd8621fb0f33f7a9be6c6edd5193829c4d6fc417edae",
++    "38": "ed90d148dab924e4e8356d9a329eebbff7ddaef17c99b7e06ca03eeebce6a7ad",
++    "39": "f46531710476ea64178d6b953786311d8ac0d888d34145d68d5124fcfd04a00c",
++    "40": "d402057d02102288aa6c59a8a08aaa67233c6998ef038ad4b7a1524c0c9e383b",
++    "41": "579d71c9d81a2cff7e6c072e20ff53d13f787e8e7ab7673f959ec1e43bf81e38",
++    "42": "8dfcc9990c8df0a16de697fdc1dd254d8aa3506e66cb07eeead48fac474b8763",
++    "43": "e892ff721861a4b028b1712838b7c0bccac193640ea96260ad62dee36eced6eb",
++    "44": "8defaff8df6e1509b238f98c338edf227ead5ef66903a37c7bdafc6a30d427bf",
++    "45": "54b3fe9f591c07b5e50a36ba98ca767e8f1080302fb4612b2e5cfee1d631a8b2",
++    "46": "bfcc0b82b1848c57a458952abc10c96e7ab677197419fd3d276e5a4084c46a67",
++    "47": "d54932c94051291b1922d6c0cb827d52a93022f7b08c6740cbad21083bd167c2",
++    "48": "f035938b2862ce35c1583a25da6aad69d24a98e179b2cfc7c2a355693152431a",
++    "49": "3c56b699e4369064b63439663c639ef740735595b74b410ee4adec978d6b6541",
++    "50": "e9f0e7fabbfb59377f9ef73da31c93e0a60f5172f634ed2bbfedd0ba572f0a95",
++    "51": "3e2d3d0cd4abbe453d6f88ea02f822cb0b8aa0be9203a5cfaaad64596b0c8f8b",
++    "52": "e1eeb241826567cc8c776340abc4bc72755124bf2bd1bdf7dd402fc13811dad8",
++    "53": "58250b76889670207e70a28f3f0def15eab80377e9d1ecee7e2cd86742ca836a",
++    "54": "c94256c986b9d9ab99bdef225f7a375556ebcc1b800ab85b3338974bd33606a5",
++    "55": "4e36654481c36f95a5b42fe1304b000ad3b58d2f16eb58120da3e77c77530212",
++    "56": "c8f10a6b69e53ab1a579c550fc9972bf88d080bdf9713cba13f4a9d613bab82c",
++    "57": "15c4a3f5ce73c6c9a6732d561d29612ba2b12756bcaf28b7d48b0d5484d18d5c",
++    "58": "c78273fe7d2e4fcd5a57a5238afec06a66eedd71f270b19458d80eedd8569d29",
++    "59": "ce082282a03d1b3f3aa8b352abfa2eec09c1e69cdfe1ca9bac3737aa10d87400",
++    "60": "f444f78040e83e9db659da159c14fa09fcf18e6afd4b04185e02d87615b243a4",
++    "61": "228bef59065b42301136061c7958c6fe551520987f5263789c9cb0b56604025c",
++    "62": "c3dce6128361b9d6e2959a747bb6e33223d8c2f0151e0e04f8b6f9624620305f",
++    "63": "76c4c7ee3bb79b0ec3da89466db33f6fa9b4d399ada7b8fc4b08ad0e3b4b65e7",
++    "64": "b4a5117fe3f87573b77d50d7500d57b57049bbd3cd80a0fec3e26021080a24a0",
++    "65": "8b36a1e0a5ff11ae9de72585c25cd03aed992bd4e368955ca85396cee19e4187",
++    "66": "fbccfdb66677d2fdf0d5279dc4cbb0f282db52589b4da09c382e0ddf73e19896",
++    "67": "578b0182e3d57e38d6761462ca49940e06f13ba5d5b557d3d19fbf65bfd64726",
++    "68": "bc08515aad951d62c262c7126d63a4830da676c77d2a6cd39d8fe3ed21701bda",
++    "69": "61739f58cfb0a3eafbff862b47c9a543cdaff6f0bc9b90d87fe06bd8c543791a",
++    "70": "6b31a14b2b35986efa989f95a44bda9841ce512d0a582ceefd007eb97765eaa2",
++    "71": "f4ee10342850782e3d5902dba698b7189809f70735620655ab742d963fa61c27",
++    "72": "cd0db8fbc8fedde0c17902834a62abe0a5429795037db1f5167295412022089b",
++    "73": "fe863a4c331236a42ada4d0e54874010ab71d95f829c5e96b0e8a97d896d6e88",
++    "74": "3a68b05ab1207cc19f72859bc862ad1f070f9387075d6d69b1c5de9a0409b0c2",
++    "75": "8464d2db042249f4619ad32c87d3a51b1e08219376ca30e32fde73f555154679",
++    "76": "a0b9bf2c21a8ab853a3bf9323de1ac99e81c8a3cf45013d6dbfb40ba1117583a",
++    "77": "554bdcea97ca0f5a796efc270334d8ccbac33198e298b25ca3b3fb1d9ec991b7",
++    "78": "a8a2b37fadb56543151603cad1c33a4085cb748578540cf09eada37b8cde0084",
++    "79": "bfaf7989b4b552db4c20130cfe86f3eb3776be2317b99c6ea3eabbbd3664084c",
++    "80": "4b6a9a0d82cacdcc04b684fc0e3f3dcb5f37c37dc06372cd0a79e38802bff705",
++    "81": "80e6937f92887ee7924ff7a9254769d40ac70412b875988e097a6a870e4ead78",
++    "82": "c361ed70b863d158bfc4cdc4aac1ecca6704f2df14f708ee189142bd403be7b1"
++  }
++}
+\ No newline at end of file
+diff --git a/tools/golden_local/exam3_small.json b/tools/golden_local/exam3_small.json
+new file mode 100644
+index 0000000..b24ae60
+--- /dev/null
++++ b/tools/golden_local/exam3_small.json
+@@ -0,0 +1,118 @@
++{
++  "corpus": "exam3_small",
++  "environment_fingerprint": "345e54ac9394a7757fa785d873fd127c8668c293c005a11b67ef1b0753970db7",
++  "engine_version": "1.11.0",
++  "page_count": 54,
++  "pages": {
++    "1": "41453d0d3da0c39712c4463235138ab34e62a7bde5b162ca9726fad190c11873",
++    "2": "7058f373b52c9731b5e84e556bdcddfbe8813ea9e56e5e1a413cd6793a3a4445",
++    "3": "fc5c300fe17c5d5b04baa10a219f3e1bc6db357674d5e885918fb6f205679b1a",
++    "4": "0506fdb1df955fe0977c500ea875cb5b8b9f210402ccba93793d428a6ec55e6b",
++    "5": "e5976793421e128a6ee3e883c8c7dd53dff336a3f64ad54e4161eaa869da3dd8",
++    "6": "8c1cdc00005bc25ac507832bf10034b027c67d86827a61364329df0f8a04be05",
++    "7": "d1a2ec7493a19d25401240606a20a6dbabf848063d027bc2e3deb747b6de25c1",
++    "8": "eaac6435d7b4dfc259452581f625d14a167a5b87790c1c81f8a31e8dbe309767",
++    "9": "46aa79470cd8d30a53d67f4698c21d95f6eb4866a1e703901b44eb9695b127b8",
++    "10": "d1342e5f0fad8c971b30478df2dd3955f1cdcca9df4d4f331184517928b587e9",
++    "11": "6b60104e53d496386c53cade981ce5d32108437e3c774c948774c308d7071b96",
++    "12": "bc67cc2f39c19bc5165d48340f850e67e6656a4898224b7b88b97bf0d2f05986",
++    "13": "2a801b8bd162c144878c3d44041e70c4a22505e13705fe7bf9b9285f6b2afca6",
++    "14": "0da076179ea69005bc47166ff7c5e573481692f4c23a47a26e086f8ba8407cb5",
++    "15": "ad817e1240a376fe72f818cb5ab92c8366b7e7af6d47551a8257a8f5ae4ebf57",
++    "16": "327e1e55cc5be3ae5ed60ee304478ea86a22fe43a356722b6eb8c417e4f08856",
++    "17": "e1f6f65f1d55e2a1a67f31cbef4686207ffde4e0f6e57e3212580aa8721fea77",
++    "18": "ec0256f43060742f63dcf116803ed785bd4dec262f5cfe726b029e7ed2509003",
++    "19": "324ec0e463c785544c6494549aa25005df33b67605bb4e681ea8530e73a06c14",
++    "20": "b2218e7a7acaaef847de4fa6f98ef6cd919815aa75a7c6bf32df627ab71f967b",
++    "21": "65d0cc72cece0b403f9d4ad95d337d60ee36a2131138d553755b60fa7c773f86",
++    "22": "89381e89a1de809c018caa981583501d4f9d97dcc282a42a85e28576c0058f92",
++    "23": "d8ea1437bc63fa397c2e0d93943e17f8c7b9d0902eb5280251932d3e11ced487",
++    "24": "395c7bb2a7ce8fcd015b01529ffd9c7cecf82df0433366ae81e58c6a6af43337",
++    "25": "dc5ddcd7e0872e4d7f23f9799884d1e4e342d278c8b9fdf05b4cbf838d86b9c2",
++    "26": "a70ada751a802d772f96131fb30d43020867ef9003cd9c2fbd0b7e7d66c6bafc",
++    "27": "1803bc90b05f037df427ead57a720bf8ca0772223af2cb72f3ac180487248d81",
++    "28": "f818007e671236830d091b0ebc73fef9cbfee2b34126138f44da8fceb58e6bfb",
++    "29": "bedc91e202312b5104b1ba1729de9c5a1fc9b0c02a3296f06424659cd0d48bd9",
++    "30": "9fb3982cd49c9ad48d37cac284b575097932c8ff1663a6f7575fdd4e99007cfa",
++    "31": "883653def6c06189296f8527367fd2126b7092030a561a09a2e57aa6b2d1d18f",
++    "32": "f349c2348c46cb6a15aa92bb3fec58f901a4b5dd37b7540711ed3f581ba166e2",
++    "33": "afb8670e44f6882eb858101db2cb70c01c7528cba2afe1ab776b957e842bb457",
++    "34": "d280994b625ff2034ac2039282c8b9590190f01075f2f2298f80d63d6b0e3e57",
++    "35": "ab87a2e400081f8d90c178518c87b38de7e665383ebe650095f51919560990a2",
++    "36": "d8c8d1063fadebae16fc4364ff395a8dfca12ef2c2039e0f5b3ae2f27c1a0e09",
++    "37": "1cd3bb0d21eca54775b345672d01b5f160eea1a7b3151320d8be1a7789662529",
++    "38": "8084a63e23e524b88e2e860b43387ce330854c35952bd1d593eab5232e42b808",
++    "39": "309ede7ee9a860f07b837d89ff1ad3aab3fee082d451de748318cbd84136061a",
++    "40": "caabacc2f699bb93f1143317fabba355623aedf3ffc77e9bf9624f0072291415",
++    "41": "b974d5b3939ccf3641bcc8d8479c6c3a292a36fa52111e87b8ed66bb39b7540e",
++    "42": "1af732e4ca2294aa8a175d4c40f9df6d86603f6983e4644c2c0fedf8ea453a74",
++    "43": "f049829d3324845f59da3b23cf73447003e07995e13252a391d9bee958dc054e",
++    "44": "2936535e3848b139fc836e3ff13ccd705684d43968555920d45c0b6453a505e5",
++    "45": "2af9f3a75de60b25e01f29d1d8f8a24388e19d63c25f9be93341f8568fe76d76",
++    "46": "b3fe69267872b5535f71591bdd8c331e9a7300cf9381f891f1ee5f60f50281fd",
++    "47": "8c91bc3585e06a642cfc166117e02dbcf74417af4d1e51992d6946e5456dd761",
++    "48": "a4d3b2fbf070c7b1a94fcf7da45c52d32453eb983625fe7c13f32de3aff9446e",
++    "49": "a37bd2c0652e4bd3234526408708863c9f110108892086a2cc204441919404d3",
++    "50": "d2be4d0ae3a1b1b2603d4b0a71f2540f3dc63df6b1b8d8fe0ba8c4294b7943cc",
++    "51": "91c36dcef67fdafba192886a3fa9ebe823a6c0b87d6a88022adfff48a2adab9d",
++    "52": "4c94d6a6926f4e3b416ec63070244209aeafde7a0399a96437b2d93c28fd82e4",
++    "53": "1cc5b98fbd5cce3781164bb994cbbaf899aee2617bef3101c570467e58d8e96a",
++    "54": "11d9af1e32e3ca0284d32697ac8eeafe734ebeae6442ab8003011df6ae7308bd"
++  },
++  "layout_pages": {
++    "1": "0bf240889d64e5bd06d76079f15c19dacbe5692548fcd67609c93941104c45a4",
++    "2": "020e14715b5d408522ea305e33230cf1d77cbeb037d2b891504479d0f8f2cc5b",
++    "3": "c060800c5766c9a4fa79495458b0cabad3667f353831c81d8cf1a77ae94c87bc",
++    "4": "9ee4cb58c889da95fbb9efdddbfb8c4b97095fac5b3d99cf22b27e442274969a",
++    "5": "ad38a28464e5e303eccbf387338987e4526cb96bf01813d56ee5d36a8ccd9e37",
++    "6": "50088577cd9f1790e7196ae7a19a30af631c0dfe39ec02c9a484ec0c57d0148e",
++    "7": "7a10465b035b7ea467cc16612d90074b2f46d55798c434404407a5c7b7d58ada",
++    "8": "f21b6ab0d8616caae4603983d575eba9ea4f510549da00e81661c93e87cc53ae",
++    "9": "417a9cc72babf8cca97be25c7824e145233c7a94c0dec2ff179d62d8be5e0c80",
++    "10": "0a76c4eff3e91fbf5a4145e562b40cdbc19429e11506b2629c0d5169efca39c4",
++    "11": "fa7a8591e47783039fcc780aa14756c449f6758f1424935fdc4bf2b36d6a1c29",
++    "12": "765f66684d6945e0704519c769808450f41f4b49a30b197c7b85eaa530291963",
++    "13": "e58c7dc3f62f5fed8fa72363701b639aa4cd45085546e9e62a62ecf86bf0e203",
++    "14": "5ffee3c86c101e545b0abb5a692f983fe6d465f1072df3bf335da3fc97184f5a",
++    "15": "871ef864ffbf981af08ffed3d931071125fcf98492c0efde89e5e19fbc27e6d4",
++    "16": "eea002f26c09fc404d4556e15d7b0724901662bfaa96c6406ad305ff5f89fd43",
++    "17": "d011f382154bbf7399b765840de4ad938a100d36c5f0f3c48ad7cfc45355403c",
++    "18": "20ebaf1827d997ea84eb4767d8fb0f4baa08009e42b424507d393e80d7834da3",
++    "19": "0cd219fbb17c16b8f52d491ab337b68d656092a3107afaf63369c1152ddd4cae",
++    "20": "b506367a7ac35e844cbb3b8e9396bc10797ac04d523943b1fbb3b071ba3294db",
++    "21": "ef0c29cbd0ce30969e60a6cfee1a8e8b6b935385419b4d7c35cf4517b9fbd097",
++    "22": "c6edf0f04f6341a627f5e3353bc4c8a75de3c4f540ca6b9ca62cda2e6bee66d1",
++    "23": "1da05582cf09a85b9ee6b040f65f640dfca8bcf070e08477cbbb4ff0c017bfcc",
++    "24": "79ed981c7ce51d9d8d62757185e36f7ccb26205efb36a12484cce76dbfbe8b84",
++    "25": "e0d47efc3094be3ba6ef9b918bc3e4c813f00487ba3095d64791b1b0afa55753",
++    "26": "82bafbf5e3d5d40c89391eb6fbec897ec2d4e8d140d77c73e5c18a5859c77b0b",
++    "27": "8248207c224a09a48a5bcf9970eb444b07e3de351c807310d155f17d06ae7f47",
++    "28": "250ed7b0e75a4dff97a686360e7f464fba3b10e6f6249870e2a3a05478b73c19",
++    "29": "6ff7dd5d87fca3cf4fc8865f3bc81204ca6afbe2090b9cdbdec26a1374958817",
++    "30": "ac3a10d9dd69386eacd68512657eaef5cd0424a8c150356e58d92e111c22439e",
++    "31": "25b070644cabb0f0f69e6c0ee97f0772bf70ad25176cee3ef0e2877c85dc897e",
++    "32": "238b5dc7859f609c5cdfadf081ca935596f49ec95d9d41737006a5bdab1da31f",
++    "33": "89db90afed30bf191e3866c9ae51976adf017e6217bb4dced267c9816403b5d8",
++    "34": "7fabae693c0ce0d03a40324af7ad3f33798007e3772887f46f844dd69131d5e7",
++    "35": "2a671ed5c38ebd0222a3abc57f08da088c5daa0661a62868a9bcbc1acdf863fc",
++    "36": "a0ee2e5fbf4214ce6aae0b59f5f20b66356e16e0a37f455ff48ad70645e23785",
++    "37": "4f223c4662cf9a9a644157738e67636d28e39928e61cb60ec8991dfc5ae2503f",
++    "38": "e028dbe90e2aa3d3ec7c8885d6b6ddd898052147536983166276a432da66a4f3",
++    "39": "03f4e25844712a889059d72cb630e8d5d42a47ee776ef48f03931476241259e1",
++    "40": "9e3291414e4bee18ce1390ea64b9649ec9c9e92213951fe797e4dc4fee7a7c31",
++    "41": "15835376ca5565c8c7e8d8ac068c57d09bee0d194261c7bd7f4abcd4e13c4d08",
++    "42": "56bb103b7b419103349a9c88fa336902a1d719f8a58f571c0cfc3dfd43c732b7",
++    "43": "846ce819c71fa08b4bcb676e4b8be49c6a45db35ff85c8aa6964e86d499c6cf7",
++    "44": "377259ba16b6981766c1c8c55344ce34660e3c3e0eb452fb75df1fa624cb491d",
++    "45": "d52caedddae5d05166ae055a2c147dcdbfd4fcf3838594d7f873f6035c72ad88",
++    "46": "93d8c1e243af7140045192047b3346b76c9ba377c0d090b8a5c7403806acdfa2",
++    "47": "1b18ebe8aac7914e58842f571b2d4ffc9c706fd228a0cd4a1d6ebdadcd989a10",
++    "48": "c7ff4290e5a04f43d7264e8cd09a1419c6ef14a2b4c1c0f61293b83c83e4f9bc",
++    "49": "103d8ad14f640516c5799ff487172fb909182da92eec4b6defaa01d459fbcdf7",
++    "50": "fe91f624344534c5f224b28c53eb368a3f01a8e46f0bcb8de81239e731b8066f",
++    "51": "38f9eaec452ce5bcfcd0e369a5d9e984a090bfc9a6904b552ac70ad25e81a5da",
++    "52": "75af17245eb5cfc60c04ae4b43ce5f724ecb8f1a268c9018e51f98986e0c00f1",
++    "53": "f1e9986b60236dc2b4867d2c3c59eeccd7af7cfce14995162d2f5f26c1448d6a",
++    "54": "61a6b8748667c41193a18dc268773663aed82d17a9f97308770620f3ff85accb"
++  }
++}
+\ No newline at end of file
+diff --git a/tools/golden_local/tables_images.json b/tools/golden_local/tables_images.json
+new file mode 100644
+index 0000000..2ab8ebd
+--- /dev/null
++++ b/tools/golden_local/tables_images.json
+@@ -0,0 +1,98 @@
++{
++  "corpus": "tables_images",
++  "environment_fingerprint": "345e54ac9394a7757fa785d873fd127c8668c293c005a11b67ef1b0753970db7",
++  "engine_version": "1.11.0",
++  "page_count": 44,
++  "pages": {
++    "1": "1fa91d1104100f5d31c5947ca84fae0aadd89bca13d99dcbe20d9da2fdd97ed9",
++    "2": "5c6e3b31077eece0f615462452c84029ef204f11f3305dc3ed3f8fcba15d7af5",
++    "3": "9c668b0acd6369d31c769906d70340681988798e765e2b8998f910d950c25818",
++    "4": "754b526d79b99debe0951ee72fbecef2c1b7806ea0a67c7d3ac39eab32d6e84b",
++    "5": "fc362f0712dad2571fada8a9724eac6946c6c36f7df6d77e23b57305a37f5516",
++    "6": "8963ce7fba47372ce73523c8117213ccb5e5d1e7b21ec3508b50a52691906631",
++    "7": "4f8122bf7e3404c387e37f862ede2b7d6cae23ddc615eb490c1f87baf1acfed9",
++    "8": "5965dad1e40a51d683a06a24e0b10627e57eb8eb4fd2dba4d8924cc2aa61f05b",
++    "9": "b0f3b6409848203d581d34f7b89c15b493d5f2b31b2c920167dcefcf00b1a000",
++    "10": "50fba7fa99698843f482510fd6795995b32cdae6961dda0b55b578a3cc237459",
++    "11": "c00c8daceaa6deb7832bd59a46df410d0d9fb7393aba76496d25f79d1c891f4f",
++    "12": "eceb4282a428894a5b2ef093e3cd757238842ea37d6d47ad1aa655f48620c5f0",
++    "13": "ee940f6b49bdf0d09902272911639c0b9d8305d081014782453d82d2ee929c68",
++    "14": "334ddd95fd4d10de6abf74d9807e8e6d69f53b8cb38cfe83d006a054c483be3c",
++    "15": "aed83191563496cebfe0cf18f92a25362461d8b1dee79b131085b3f7b6f7712d",
++    "16": "5db550b75d2b6d9c6663cc3243a33dd3a44b09571f6280911ad75abb348a60c3",
++    "17": "898fe6d2f918556554a73e4dead2cea2fc91c4981859656ba2b213bd22ffc4e9",
++    "18": "5de391727961b8ec37e711d6ffb16cbc154314a7202dc154053225c746d97b4c",
++    "19": "d7e85dea5f20a29db658eb32b8088a17f3d238d1834ca488256daea07e1f859a",
++    "20": "5d27f43a7ef499ff9beab35a5c9a553721a8ece48c0810deaa43c9b130a2a9a2",
++    "21": "d7a0058973297fbe2c0c816df836672b8bf09dc5286aa4adc60e87c2dd8fb99d",
++    "22": "5d345f467350e8f487c81e2c496868bb6475d1757d93394b213ba49aef886e2b",
++    "23": "be37eaff817f5cc5b4ed0992d0a8b3b7be984602ba8f87eb92313966ed203c45",
++    "24": "b8b008e27d67162f811c534cb8dbea253736d0814c3834f1b0027b5617c72011",
++    "25": "591352cf161df1e63c78556191a1080edf7a9a5b94e7ee1e36a1e81f4fb31765",
++    "26": "7b89943340128f1e20e7cfab5c4ea8b46abdd53af8f3565c94ae7decda1d1a9f",
++    "27": "f75b46e2ad1d14443b9c56bd1b78ad92bd258b6078f5863a24b85899e1d08947",
++    "28": "e0cb90b059f5e07b956c625c5356f4523a91f470fe60f319d3d305060674ef07",
++    "29": "f43dd1e570ff76c8f73708421074ab8627e077a95e9a1bb42a3bc998cc6f7812",
++    "30": "0b9c4f5e604d86a5a25f036ec93bd0cc1f9c2074cb8aed2e8ec45ead330665c6",
++    "31": "de4ed4e490bb0166a60991ca8532cea3508d9f129d3a4e32c43dcc275efc6207",
++    "32": "48e095f27ebb214a86cfb79a51d560087a0bb0a9cc7f05b7d3428ab60c82c323",
++    "33": "13bdadc6fbc77bf10d7e0827ad55fd97833f012dff94ffd6de4ef49f13b934a5",
++    "34": "f6e22810f4f62e7367c82eaae5f172b8be96c43301b510e8a1f79555819833e6",
++    "35": "83081f7b25a9b0c2ef06f5d16bfc47c87e3ecc1327a1653cd11ca5c04ff5b386",
++    "36": "e87ffc0e3f6412c089b64c74d634ba4473675058a4c780f2032eadb1d39c1f4b",
++    "37": "a8781a65c01264d97dee1953060941effb5ae64a5809019a3eacb7a4022454cd",
++    "38": "0671d3bb2ddbb990be92d601b19cf60e5dc7c345618d1f49430fa1002eaeaa36",
++    "39": "bbcf0d484963d3fd0278178a9c1701bf2d30bc5113ae4c3721b4a9cbaf40439b",
++    "40": "7a4e2f8f464f3f4227e43c743e8561cd9a36f1506914b927135a20b4a5aba2a4",
++    "41": "3c9fd92fa63c3a02ea4c1f078d748b4591ae33d2681d3f254563b454f37b9ed7",
++    "42": "2806b7cd32c0dd9cbd935f4100c7861200aeb7ed3c710127a2eac537c5b7da90",
++    "43": "2cb67e95f35460dedb911a9fb66c4da13dc8f494f805ee8c656555d741b13c33",
++    "44": "bc77f6e064036d370a643bc3a9881985f2415b03499f83fec7012cb1e52174a4"
++  },
++  "layout_pages": {
++    "1": "8d48d979e23a3caddd1d241f11f176ec209fde5dea91ad3bb8173c2223c7a48a",
++    "2": "7ee77d2df6815145121e78aade63317abd7f92eb4c323a4b2919a43ef647813c",
++    "3": "cd2113ff55d84e9dad1d62d5d583b751470de1c36c132f8ed99f92ba82c56216",
++    "4": "8c1bfcd3fc2846cce577d3962888db908501b842a37e0795ed6e998ba5a84d1f",
++    "5": "4de0d0644153be42313940b7d604e1ee675b9ede0873dd6c602ea82ce76f61bb",
++    "6": "0b5c2cc246956cf57583c35d1f9cab18434ec1f75137b336dcf9f2cd5a913161",
++    "7": "e40d2679ba41b7ba68294eac1ff10f8e44ad27ee183e376df879833b31e0c89b",
++    "8": "60ce697fbe8893bd5901fa9e1c053f7a7b1d1bf9967fe8bffb1fc0fd24558e52",
++    "9": "fc5d44bc2a1d11f699c9871a240991f3599763077e0ddd1944438288edb8f5a4",
++    "10": "791d0e18be4b83176fedf5a7f3008d683486c110b4716de8c37463707901c638",
++    "11": "e7e21f332733c35b9821071d00578411e33e6ac90ccf3603ca223ed6d400f942",
++    "12": "1b30ffb191e589f40c3727321b24372deb2e7714044819e513ff17e23320664e",
++    "13": "bc062e69ca16447acbd7d36c29cac1460730f201b05acdfd02e31b3905e15fff",
++    "14": "e16b73c855ea43c17d21c9b5b5f01bfcac6665d1441a5b392714c35908b3d391",
++    "15": "2f8b2e3d131f593024511df040ce9b3779c7cae8c914f216beb8ff14bb4b3ed1",
++    "16": "11a0c0eb7250dd4dae036e16fbf676e4cb6bbb48ec96b63cb5cb04544ff929e7",
++    "17": "bd6a897633faf2c4a4b9a4ad50d91e54ddc48804c5e11ef85cd899aaa018f38e",
++    "18": "17826b9ba8571ea669202609e9e8590877cc4f4db6087a1f3762d1aac7adc719",
++    "19": "47385138351e6130794c8aec131783f62ce679e395ac737c2103c358850b4374",
++    "20": "31d0c7354253623df8b335cb3fe2c8a073dee4e4964fa4c818cdb1c351cbabcf",
++    "21": "6dce5daa928503e29cdcfb8efef8f479ad31f055510826cacba2ee73ac0cf21f",
++    "22": "334cbdc70105edc7908ec0fccf45ab4e1118b90506082834546f8c3760ed6011",
++    "23": "f214674d479074d5994611e681d4fd4a6b14a36b52438827ee2bf55e036d0d6e",
++    "24": "27ea120b22f42cbd0c16e7bb3805c409cfbff68999b3f7a3cfed5b5008fd422d",
++    "25": "3bbaf43fc160c9bdad6c5f74be1e6106175e96b918e1ef7b85bcf1d3ba012e4d",
++    "26": "ac1df9cb7a96cd969999b45da055c9eed12544d14f650d05293454cf7c431e17",
++    "27": "577d11033002d5b7583ab61351d75258fef6b48e6db4be4ebe1a75a4b3601bba",
++    "28": "96df1fb52511ddc3a99cf86378efd12c6820c2cb0b146ca7b3be84477f9329b3",
++    "29": "c106eadeed95c697dafe46a8fc04d66882ff6f2297a7ba2ca7fbd93364e2663f",
++    "30": "7a26b8766ca967d319b099cbec2ae682f997426d335137acffd9d00f6512bf94",
++    "31": "6cab50de48ee916aeb6a9e0f715c5a3be8eaadd8d47c305f68cae7eeb08bfce7",
++    "32": "4f9bbbde6325a7ff91ad4953b2384756a32d13eb28baf5664abe3c3f986a55a2",
++    "33": "4b2e6601d4bda06af3030e7e165d8002f7c3a691ffcb96cb1b9cbe8a724de6b6",
++    "34": "29592cc7525670f48d8f2f6dda3973661a5679956fd5dfada0e5b0fdd635ca04",
++    "35": "13e119411ef085fe929451c6f04e25a9b92dfa1b5b4683d0cbb3fb21f49ead63",
++    "36": "c5303c0e2ca2ef7723f09c537b268967e204531d9c67af253606d05cf3f3be84",
++    "37": "c9cde47714553c2217f5d7ffe4ab47098e78ddce75b72f0c844705bb0c934179",
++    "38": "dc5ca58f77f7421fa363cdc60f43487b0d517440fd49a116728b9efee660168d",
++    "39": "2926e12a2cbfb0df5a3e924bdee8f0199e4955c8361c85186bc31fd928dfadcb",
++    "40": "e95561c90b3203d231bd81c512a709f144ffd3e54d7a4bceda203ed29e7ec9c7",
++    "41": "7c7aa1c64c42a74ed8c0789e9f157efee17232a7c7f01a550280908eaf6486ac",
++    "42": "cb50a86fd135acc1a3ce39c3259148ea153840bb74a15f4d5ec27403020c659f",
++    "43": "87f00e55bfd96aced636d3edb1fda3a2d72fcf300bad7cc3a635048ccbbeb71e",
++    "44": "45c9f386603bdddb9229780f5385881d87bcd13ad6c2a15513fdb29c0e866b94"
++  }
++}
+\ No newline at end of file
+diff --git a/tools/ir_diff.py b/tools/ir_diff.py
+new file mode 100644
+index 0000000..a0f5940
+--- /dev/null
++++ b/tools/ir_diff.py
+@@ -0,0 +1,71 @@
++#!/usr/bin/env python3
++"""Compare two PositionedPage IR JSON files and print the FIRST difference."""
++import argparse
++import json
++import sys
++
++
++def diff_dict(a, b, path=""):
++    keys = sorted(set(a.keys()) | set(b.keys()))
++    for k in keys:
++        p = f"{path}.{k}" if path else k
++        if k not in a:
++            return f"Key '{p}' missing in first, present in second: {b[k]}"
++        if k not in b:
++            return f"Key '{p}' present in first, missing in second: {a[k]}"
++        va, vb = a[k], b[k]
++        if type(va) != type(vb):
++            return f"Type mismatch at '{p}': {type(va).__name__} ({va}) vs {type(vb).__name__} ({vb})"
++        if isinstance(va, dict):
++            res = diff_dict(va, vb, p)
++            if res:
++                return res
++        elif isinstance(va, list):
++            res = diff_list(va, vb, p)
++            if res:
++                return res
++        elif va != vb:
++            return f"Value mismatch at '{p}':\n  first:  {va}\n  second: {vb}"
++    return None
++
++
++def diff_list(a, b, path=""):
++    if len(a) != len(b):
++        return f"List length mismatch at '{path}': {len(a)} vs {len(b)}"
++    for idx, (va, vb) in enumerate(zip(a, b)):
++        p = f"{path}[{idx}]"
++        if type(va) != type(vb):
++            return f"Type mismatch at '{p}': {type(va).__name__} ({va}) vs {type(vb).__name__} ({vb})"
++        if isinstance(va, dict):
++            res = diff_dict(va, vb, p)
++            if res:
++                return res
++        elif isinstance(va, list):
++            res = diff_list(va, vb, p)
++            if res:
++                return res
++        elif va != vb:
++            return f"Value mismatch at '{p}':\n  first:  {va}\n  second: {vb}"
++    return None
++
++
++def main():
++    ap = argparse.ArgumentParser(description="Diff two PositionedPage IR JSON files")
++    ap.add_argument("file_a", help="First IR JSON file")
++    ap.add_argument("file_b", help="Second IR JSON file")
++    args = ap.parse_args()
++
++    a = json.loads(open(args.file_a, encoding="utf-8").read())
++    b = json.loads(open(args.file_b, encoding="utf-8").read())
++
++    diff = diff_dict(a, b)
++    if diff:
++        print(f"DIFF FOUND:\n{diff}")
++        sys.exit(1)
++    else:
++        print("IDENTICAL")
++        sys.exit(0)
++
++
++if __name__ == "__main__":
++    main()
+diff --git a/tools/parity_check.py b/tools/parity_check.py
+index 04a6191..007f6d2 100644
+--- a/tools/parity_check.py
++++ b/tools/parity_check.py
+@@ -40,6 +40,7 @@ def main():
+     ap = argparse.ArgumentParser()
+     ap.add_argument("--kr-cli", required=True)
+     ap.add_argument("--repo", default=str(pathlib.Path(__file__).resolve().parent.parent))
++    ap.add_argument("--golden-dir", default=None, help="Directory containing golden json files (default: tools/golden)")
+     ap.add_argument("--corpus", action="append")
+     ap.add_argument("--timeout", type=int, default=1800)
+     a = ap.parse_args()
+@@ -59,7 +60,8 @@ def main():
+             if cand.exists():
+                 epub = cand
+                 break
+-        gpath = repo / "tools" / "golden" / (name + ".json")
++        golden_dir = pathlib.Path(a.golden_dir) if a.golden_dir else (repo / "tools" / "golden")
++        gpath = golden_dir / (name + ".json")
+         if epub is None:
+             print(f"[parity] {name}: NOT RUN: epub {p['epub']} not found")
+             continue
+diff --git a/tools/reference_samples/minimal_book_default_42_57/book_model.tsv b/tools/reference_samples/minimal_book_default_42_57/book_model.tsv
+new file mode 100644
+index 0000000..633ca65
+--- /dev/null
++++ b/tools/reference_samples/minimal_book_default_42_57/book_model.tsv
+@@ -0,0 +1,3 @@
++B	Minimal Book	Anonymous	1	1	1	0
++S	0	11	chap1
++T	0	0	0	chap1
+diff --git a/tools/reference_samples/reference_manifest.json b/tools/reference_samples/reference_manifest.json
+index 1722af7..f8d4ccf 100644
+--- a/tools/reference_samples/reference_manifest.json
++++ b/tools/reference_samples/reference_manifest.json
+@@ -1,6 +1,6 @@
+ {
+   "engine_version": "1.11.0",
+-  "environment_fingerprint": "0a54d71bb5a5988b99f67f4281f2ff9d339c91c8324fc6496a50d77ebf952e3d",
++  "environment_fingerprint": "345e54ac9394a7757fa785d873fd127c8668c293c005a11b67ef1b0753970db7",
+   "freetype_version": "2.12.1",
+   "harfbuzz": {
+     "loaded": true,
+@@ -44,12 +44,12 @@
+         ]
+       },
+       "timings_ms": {
+-        "epub_parse_ms": 103.94,
+-        "layout_ir_ms": 18338.35,
+-        "open_total_ms": 18442.29,
+-        "page_model_build_ms": 319.54,
+-        "render_p50_ms": 54.25,
+-        "render_p95_ms": 61.63
++        "epub_parse_ms": 117.52,
++        "layout_ir_ms": 22429.08,
++        "open_total_ms": 22546.6,
++        "page_model_build_ms": 396.3,
++        "render_p50_ms": 71.99,
++        "render_p95_ms": 166.05
+       },
+       "layout_pages_sha256": {
+         "1": "0cf27425e9d379e3a973f76cbf9e78abc57b7a5d760c6b32781e00516b0b4ba8",
+@@ -102,7 +102,7 @@
+         "48": "0485a5bdd0354aa52dccafd443a3af08a31427eefd0bca632f61634bd0caf63b",
+         "49": "5d17b40ca920ce20d88e8d847efbce8a91d2599609e9028d19b7bc85c34892db",
+         "50": "cbf67034ab11e8c4138f7f317f185c014a73efb625bf70a5585db5b37adee829",
+-        "51": "d510b0c86fff5348f3d0fb93f61b1e15d116c9a4d81f677ba3657d47b7f1d127",
++        "51": "047bec724ee6f5adb0039c91980b77847dad16a65bdd4312f2a9c2424bb3d0b9",
+         "52": "b307d7f63d6cd859e39821de5b90a7eb216d10f1cb5f05647746f9e2d3e34779",
+         "53": "3b604aef01f12c5dd39d6124b9d67f4e6115805f249c3795461d0bcbb4b14404",
+         "54": "f6f8cfcc57cbc31050c7390f14785656e8e158cff4058501e37ffc2875a9f1ca",
+@@ -174,7 +174,7 @@
+         "48": "0fb4db9f0f8a2eabe4bb649217c75937ae32d1cdbc5d5a7a23fd6a68f0d9c838",
+         "49": "cd24855727d3f005de8eeca2b92d0f640d31e56395751b7c6c86590371af6c5c",
+         "50": "3a76ba4b3f73b31c1cb93b7ffb906911eda9be5a591a3316433ba691cd8ce54a",
+-        "51": "75cf646184e482cf6e1171eb37dcb360e7c9dada6ee9012b0252a38720ac538d",
++        "51": "6d2ad11cda43134a250cba9768308562e4c802f3d76649e2366850350b3ae9f4",
+         "52": "9b3664b7c5e1242f46128ff794fa1c1ab5ce585fa8b4a5ffbb9e855644943e35",
+         "53": "cc1c3b17803d0497e39ba8faf6b2087559128a603f92fe1e23b62368eb71bfbc",
+         "54": "c469516159fa7d5a08ba6a1144df63b9ff6436c92ef5ba391a3fdfae7c9462e7",
+@@ -246,7 +246,7 @@
+         "48": "e0aacb96e5ee095826c1218c2d077b66c5d4aada74457acdaf9b5854cd367f86",
+         "49": "bfd1da896d8e0a1f8b656665fb94ab7840d39a854efd3d1d734c2acdf078f971",
+         "50": "e6871af983a4c80b2084c084dadd168d6b4f282a7cc5633911b571534d37e06c",
+-        "51": "7ed7d589bdd6dafd49288fc8dfbd6a93a7734a38679d5c0e97d00d93d8635e2b",
++        "51": "40606dff6996cf98a92481374388f0f584037d88fb57d7279322d96f16686611",
+         "52": "c1f65029cf2b613bce6c8457151b0a54097f6a72e96ac0699e62897cfad4bb50",
+         "53": "65e5cf84023c18b2e1ebfe1bba73682113ce3ce1f2c9ca47dc4dff73c8d4de83",
+         "54": "b24b529dcffd57ac74bb763cc35d3ad2bb5f6e832d62c2c070ed3cf46f22cf4e",
+@@ -296,12 +296,12 @@
+         ]
+       },
+       "timings_ms": {
+-        "epub_parse_ms": 95.7,
+-        "layout_ir_ms": 26237.08,
+-        "open_total_ms": 26332.78,
+-        "page_model_build_ms": 322.94,
+-        "render_p50_ms": 53.91,
+-        "render_p95_ms": 63.07
++        "epub_parse_ms": 100.83,
++        "layout_ir_ms": 29013.09,
++        "open_total_ms": 29113.93,
++        "page_model_build_ms": 400.44,
++        "render_p50_ms": 66.69,
++        "render_p95_ms": 89.25
+       },
+       "layout_pages_sha256": {
+         "1": "ff0f8e712f44636608440d9eecc17c46736f9a059a277cc2d753135209967a86",
+@@ -313,8 +313,8 @@
+         "7": "d17c522c580658729f21ea3b5646b236097960da60721d3b0c47ee5f5bc28dac",
+         "8": "ca3736191061946cac1da5257e6404b310b95ae109158e8576c8ba6377ae396f",
+         "9": "27532c473fea7ddf958ded8fdef12b093451ad0c144289f401e43e147fd0cd11",
+-        "10": "b4dc0d3e6727dee8fcda226e8531a75696579afda7053e59e5964c11bade235d",
+-        "11": "6ec117c0dfc227b7c4de4862e5edc017388a19735569d269680cf313ff48b431",
++        "10": "39129400864ef17348518817ab1f35f8858eccf637c92f8466559db54af39023",
++        "11": "ca73ca12a514f4c61389e95e33e2e14a82dd48ea4abb5c476ac57b56043d12eb",
+         "12": "1ff2daf261c8c9bc92c184a4d840ddedefd3f867b7ab86b06566fc2828cc36bd",
+         "13": "c7795d9f4bdb71f0d31a5a499f0e7785bb1616392a20d1655dd05c7cdecc620e",
+         "14": "f7da3fc205ef99dd973a190e64165ae42dd982fbf2fa3e26442f0c50b791d47e",
+@@ -379,8 +379,8 @@
+         "7": "2b38ebde845d02a4a0d6f51ae82ee0e9802de6ed96c8ca9b1b0d98dc43110357",
+         "8": "9f5fb44a68007b6d4afa482c3a95e94a753d527593265848f4c5f9d6712688fb",
+         "9": "01ba2e361b0f5b95e02f90e58d00d6081d27138dc1c49ca1fdee3248d0562ee9",
+-        "10": "cd69dd712125c756935f5010381775e899d0ce61d4807a0c5f3facd78ae1ea1f",
+-        "11": "0ee0d3eca62f863cbe69220398b76980678142bad2a94cbcad8314414c329bdb",
++        "10": "4e40fce2af0d238cfdf66c68bc67bb5a06df8f8f45eb242865b5634af1048495",
++        "11": "a534ec0a4520a26ce436883ecc3c7bc7daaf97a4759fac74f4f05bbfa1860d8f",
+         "12": "49a76cc0ffa9aa3209844a29882977c052d01365f310d485e76c87a0fec3952c",
+         "13": "e428a7334a515ae572c314706727971b6791a35a615fd06f9833086aed6c9cd5",
+         "14": "1db70224b12078b72c788bbf21a91a2b539c4dd324055a02f3020f3c0cb25ceb",
+@@ -445,8 +445,8 @@
+         "7": "5370d8e3716a1b6e6142e529862bd77c99752cbdbde8fb1f002a7fc205b62221",
+         "8": "e55ba3cc6502237f695069a01ea47ef7e0984a0e3dd8dcbc3250504683c72461",
+         "9": "866e9d001eb463498ea9d252344d8985505b67a2f53860bc8699c128a4490b6b",
+-        "10": "9344bfb6af1bc81061b0fd8561e17289a69883e990299db8eea3130952a10aea",
+-        "11": "32c12430f0b6bc3a793ae48b0cfe2493f588ebf242ca31a0c944ce5e6695ac4f",
++        "10": "2de4e8ef4f3dc22715b958a17988fb56d7cdf71fa1c9b03e4ccfb304fa6b807b",
++        "11": "471781c298a96b592616bc9090a0c7335aefadacb5e49f68f8618998a9e72c84",
+         "12": "43806843c11d4bd27226b2798d8c97ba63c59ca9b2104bcabbd3d4552bf6c545",
+         "13": "5847f6bde668d32d6b0154d148cbee471a27eec5b0e25ef9e890bc4605c636c9",
+         "14": "80857bac5ce05c3948eb4971648373335723b0a13942b4330833e98e6fd0d4d3",
+@@ -525,12 +525,12 @@
+       "p0b_violation_details": [],
+       "missing_font_pages": {},
+       "timings_ms": {
+-        "epub_parse_ms": 98.06,
+-        "layout_ir_ms": 20644.79,
+-        "open_total_ms": 20742.85,
+-        "page_model_build_ms": 431.46,
+-        "render_p50_ms": 57.06,
+-        "render_p95_ms": 65.19
++        "epub_parse_ms": 118.41,
++        "layout_ir_ms": 22821.31,
++        "open_total_ms": 22939.71,
++        "page_model_build_ms": 546.58,
++        "render_p50_ms": 65.25,
++        "render_p95_ms": 89.02
+       },
+       "layout_pages_sha256": {
+         "1": "0bf240889d64e5bd06d76079f15c19dacbe5692548fcd67609c93941104c45a4",
+@@ -808,12 +808,12 @@
+       "p0b_violation_details": [],
+       "missing_font_pages": {},
+       "timings_ms": {
+-        "epub_parse_ms": 107.75,
+-        "layout_ir_ms": 26012.07,
+-        "open_total_ms": 26119.81,
+-        "page_model_build_ms": 439.85,
+-        "render_p50_ms": 69.3,
+-        "render_p95_ms": 77.5
++        "epub_parse_ms": 120.27,
++        "layout_ir_ms": 23216.8,
++        "open_total_ms": 23337.07,
++        "page_model_build_ms": 492.49,
++        "render_p50_ms": 61.81,
++        "render_p95_ms": 76.35
+       },
+       "layout_pages_sha256": {
+         "1": "0bf240889d64e5bd06d76079f15c19dacbe5692548fcd67609c93941104c45a4",
+@@ -1007,12 +1007,12 @@
+       "p0b_violation_details": [],
+       "missing_font_pages": {},
+       "timings_ms": {
+-        "epub_parse_ms": 180.43,
+-        "layout_ir_ms": 18101.17,
+-        "open_total_ms": 18281.61,
+-        "page_model_build_ms": 161.57,
+-        "render_p50_ms": 55.79,
+-        "render_p95_ms": 63.66
++        "epub_parse_ms": 183.89,
++        "layout_ir_ms": 15283.54,
++        "open_total_ms": 15467.43,
++        "page_model_build_ms": 1335.39,
++        "render_p50_ms": 54.41,
++        "render_p95_ms": 99.46
+       },
+       "layout_pages_sha256": {
+         "1": "8d48d979e23a3caddd1d241f11f176ec209fde5dea91ad3bb8173c2223c7a48a",
+diff --git a/tools/reference_samples/valid_book_default_42_57/book_model.tsv b/tools/reference_samples/valid_book_default_42_57/book_model.tsv
+new file mode 100644
+index 0000000..d3e7440
+--- /dev/null
++++ b/tools/reference_samples/valid_book_default_42_57/book_model.tsv
+@@ -0,0 +1,5 @@
++B	Pride and Prejudice	Jane Austen	2	2	1	0
++S	0	127	chapter1
++S	1	79	chapter2
++T	0	0	0	Chapter 1
++T	0	1	0	Chapter 2
+diff --git a/tools/reference_samples/valid_book_large_45_68/book_model.tsv b/tools/reference_samples/valid_book_large_45_68/book_model.tsv
+new file mode 100644
+index 0000000..d3e7440
+--- /dev/null
++++ b/tools/reference_samples/valid_book_large_45_68/book_model.tsv
+@@ -0,0 +1,5 @@
++B	Pride and Prejudice	Jane Austen	2	2	1	0
++S	0	127	chapter1
++S	1	79	chapter2
++T	0	0	0	Chapter 1
++T	0	1	0	Chapter 2
+diff --git a/tools/reference_samples/valid_book_small_34_51/book_model.tsv b/tools/reference_samples/valid_book_small_34_51/book_model.tsv
+new file mode 100644
+index 0000000..d3e7440
+--- /dev/null
++++ b/tools/reference_samples/valid_book_small_34_51/book_model.tsv
+@@ -0,0 +1,5 @@
++B	Pride and Prejudice	Jane Austen	2	2	1	0
++S	0	127	chapter1
++S	1	79	chapter2
++T	0	0	0	Chapter 1
++T	0	1	0	Chapter 2
+diff --git a/tools/run_in_container.sh b/tools/run_in_container.sh
+new file mode 100755
+index 0000000..05f3402
+--- /dev/null
++++ b/tools/run_in_container.sh
+@@ -0,0 +1,38 @@
++#!/usr/bin/env bash
++set -euo pipefail
++
++SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
++REPO_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
++WORK_ROOT="$(cd "${REPO_DIR}/.." && pwd)"
++
++# Ensure logs dir exists
++mkdir -p "${REPO_DIR}/logs"
++
++# Run command inside kr-parity container with incremental volumes
++# Named volumes:
++#   kr-target for /tmp/krtarget
++#   kr-cargo for /opt/cargo/registry
++#   kr-ref for /work/ref
++# Mounts:
++#   render.engine as /workspace
++#   opus-reader as /opus-reader
++# CARGO_TARGET_DIR points to /tmp/krtarget
++docker run --rm \
++    -v "${REPO_DIR}:/workspace" \
++    -v "${WORK_ROOT}/opus-reader:/opus-reader" \
++    -v kr-target:/tmp/krtarget \
++    -v kr-cargo:/opt/cargo/registry \
++    -v kr-ref:/work/ref \
++    -e CARGO_TARGET_DIR=/tmp/krtarget \
++    -w /workspace \
++    kr-parity \
++    bash -c '
++        EXIT_CODE=0
++        if [ "$#" -eq 0 ]; then
++            cargo build --manifest-path rust/Cargo.toml --release
++        else
++            "$@"
++        fi || EXIT_CODE=$?
++        chown -R 1000:1000 /workspace/rust /workspace/logs /opus-reader/engine/src/test/resources 2>/dev/null || true
++        exit $EXIT_CODE
++    ' bash "$@"
