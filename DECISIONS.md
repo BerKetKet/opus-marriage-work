@@ -64,3 +64,14 @@ Every decision taken during this session is logged below with its rationale and 
 ## D12. GitHub Review Repository Creation & Asset Sanitization
 - **Decision**: Initialize and push the top-level marriage repository (`BerKetKet/opus-marriage-work`) as requested by the user, while sanitizing proprietary assets and hardware identifiers. Exclude all proprietary fonts (`*.ttf`, `*.otf`), hyphenation tables (`*.bin`, `*.dic`), and large zip archives (`*.zip`) via `.gitignore` per Rule S4, and redact hardware serials (`[REDACTED_DEVICE_SERIAL]`) per secrets policy.
 - **Reason & Evidence**: Enables external code review through GitHub without uploading proprietary Amazon fonts or leaking physical device serials to a public repository. Deliverables (`deliverables/render.engine.patch`, `deliverables/opus-reader.patch`, and `libkindle_render_jni.so`) are preserved for merge and review.
+
+
+## D13. Real EPUB Ingestion via Deep Link & Internal Storage
+- **Decision**: Wire `opus://open?path=...` in `AndroidManifest.xml`, `MainActivity.kt`, and `DebugFixtureController.kt` to import real EPUB files via `EpubImporter`, saving the unpacked book into the application's internal files directory (`/data/user/0/app.opusreader/files/epubs/`), and passing the validated absolute path to `ReaderViewModel.loadBook(book.id)`.
+- **Reason & Evidence**:
+  1. Solves Blocker 1 and 2: Previously seeded books used nonexistent paths (`/books/...`), causing `engine.open` to fail with `FileNotFoundException`, leaving `engine.currentSession` null and rendering a blank black canvas.
+  2. Tested and verified on device with `kindle_exam_v3.epub`: Successfully imported book, created `BookEntity` with valid path, and opened cleanly in `NativeReaderEngine`.
+
+## D14. Hyphenation Asset Directory Search Path Alignment
+- **Decision**: Update `AndroidEngineAssets.kt` to check `candidateNames = listOf("hyphen/$lang.bin", "hyph/$lang.bin", "hyphen/hyph_$lang.bin", "hyph/hyph_$lang.bin", ...)`.
+- **Reason & Evidence**: The repository assets directory is `app/src/main/assets/hyphen/`, whereas `AndroidEngineAssets.kt` originally searched only `"hyph/"`. Without this change, hyphenation tables were not loaded into the native engine.

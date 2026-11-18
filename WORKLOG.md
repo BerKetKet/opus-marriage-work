@@ -128,3 +128,54 @@
   - `DECISIONS.md` (decisions D1-D11 logged with empirical rationale).
   - `MERGE_MANIFEST.md` (manifest of changes and application steps).
   - `FINAL_REPORT.md` (comprehensive final report).
+
+## D0. Orientation & Baseline Check
+- Probes confirmed: Galaxy M30 (`SM-M305F`) on adb, Java 21, Gradle 8.7, clean git working trees.
+- Tagged `diag-baseline` in `render.engine` (`76447a0`) and `opus-reader` (`a956e59`).
+- Checked assets and libraries: `libkindle_render_jni.so` (4.1 MB) present; 12 fonts and 15 hyphenation tables present.
+
+## D1. Diagnostics Collection
+- Built and installed fresh APK: `BUILD SUCCESSFUL`, `Performing Streamed Install`, `Success`.
+- Ran unit tests and guard: 47/47 JVM unit tests pass; `tools/guard.py .` -> `GUARD OK`.
+- Systematically navigated through all reachable screens: D01 (Library Grid), D02 (Home), D03 (More), D05 (Filter Sheet), D06 (View & Sort), D07 (Library List), D08 (Collections), D10 (Reader Chrome), D11 (Contents/TOC), D12 (In-book Search), D13 (Annotations), D14 (Annotations Filter), D15 (Annotations Sort), D16 (Annotations Export). Captured screenshots in `deliverables/diag/` and logs in `logs/`.
+- Root cause identified: No intent filter or file picker exists to import real EPUB files; seeded books in database use mock paths (`/books/...`), which cause `engine.open` to fail, rendering a blank canvas. Display settings (D17–D20) and Overflow menu have no UI handlers in `ReaderScreen.kt`. Documented in `DIAGNOSIS.md`.
+
+
+## D0. Diagnostic Orientation
+- **Date/Time**: 2026-11-18 22:35
+- **Device Probed**: Samsung Galaxy M30 / M32 (`SM-M305F`, Android 13, `arm64-v8a`, 1080x2340 @ 420 dpi, density 2.625).
+- **Baseline Git Tags**:
+  - `render.engine`: Tagged `diag-baseline` at commit `76447a0`.
+  - `opus-reader`: Tagged `diag-baseline` at commit `a956e59`.
+- **Assets & Libraries**: `libkindle_render_jni.so` (4.1 MB) present; 12 fonts in `assets/fonts/`; 15 hyphenation tables in `assets/hyphen/`.
+
+## D1. Diagnostic Collection Across Reachable Screens
+- **Tested Screens**: Captured screenshots and logs for D01-D16 in `deliverables/diag/` and `logs/`.
+- **Key Discovery**:
+  - Tapping books from Library rendered a solid black screen because seeded books had simulated file paths (`/books/...`), causing `engine.open` to fail.
+  - Display settings ("Aa") and reader overflow menu composables are unbuilt (S07 and S08/S09).
+  - `AndroidEngineAssets.kt` searched `"hyph/"` instead of `"hyphen/"`.
+
+## D2. Real EPUB Ingestion & Display on Phone
+- **Test Book**: `kindle_exam_v3.epub` (57 KB, 15 spines, 14 TOC entries).
+- **Fixes Applied**:
+  - Added `opus://open` intent-filter to `AndroidManifest.xml`.
+  - Implemented real EPUB stream copy and import in `DebugFixtureController.kt` and `MainActivity.kt`.
+  - Fixed `AndroidEngineAssets.kt` candidate paths to include `"hyphen/$lang.bin"`.
+  - Fixed `ReaderViewModel.kt` to reset `activeSheet = null` and `isChromeVisible = false` on `loadBook`.
+  - Wrapped `android.util.Log` calls in `try/catch` in `ReaderViewModel.kt` to prevent unmocked JUnit crashes.
+- **Verification on Device**:
+  - EPUB imported cleanly into `/data/user/0/app.opusreader/files/epubs/kindle-exam-v3.epub`.
+  - App selected `NativeReaderEngine` (`kindle_render_jni selfTest PASSED`).
+  - Page 1 rendered cleanly: `18_exam3_page1.png` ("KINDLE RENDER EXAM").
+  - Middle page rendered cleanly: `19_exam3_page_middle.png` (anti-aliased Bookerly prose).
+  - Last page rendered cleanly: `20_exam3_page_last.png` (terminal spine item `x4_lines_bolditalic`).
+  - Forward and backward page turns verified (30 forward: avg 364 ms/turn; 30 backward: avg 327 ms/turn).
+  - TOC opened and displayed 14 chapters: `21_exam3_toc.png`.
+  - Chapter jump to "E03 Long Words and Names" verified: `22_exam3_chapter_jump.png`.
+  - Memory: Total PSS 795 MB (Native Heap 567 MB, Java Heap 41 MB).
+
+## D3. Final Verification & Documentation
+- **Guard**: `python3 tools/guard.py .` -> **GUARD OK**.
+- **Unit Tests**: 48/48 tests PASS across `:app`, `:data`, `:design`, `:engine`.
+- **Documentation**: Generated `DIAGNOSIS.md`, `deliverables/diag/INDEX.md`, `OWNER_GUIDE.md`.
