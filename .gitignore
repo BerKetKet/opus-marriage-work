@@ -15,6 +15,10 @@ build/
 *.apk
 *.aab
 *.dex
+*.so
+*.a
+deliverables/engine_device/
+deliverables/oracle_py/
 
 # Python
 __pycache__/

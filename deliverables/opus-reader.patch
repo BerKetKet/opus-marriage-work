@@ -15,7 +15,7 @@ index 00f8143..62fd39c 100644
  - **Architecture Guard:** `python3 tools/guard.py .` -> `GUARD OK`.
  - **All Gates Passed:** `tools/gates.sh` passes completely across all modules:
    - Unit tests: 35 tests total, 0 failed, 0 skipped.
--  - Device tests on physical Samsung Galaxy M32 (`32001776e8e82623`, 1080x2340 @ 420 dpi): 26 tests total, 0 failed, 0 skipped.
+-  - Device tests on physical Samsung Galaxy M32 (`<device>`, 1080x2340 @ 420 dpi): 26 tests total, 0 failed, 0 skipped.
 +  - Device tests on physical Samsung Galaxy M32 (`[REDACTED_DEVICE_SERIAL]`, 1080x2340 @ 420 dpi): 26 tests total, 0 failed, 0 skipped.
  - **Physical Phone Verification:** Tested directly on Samsung Galaxy M32 device:
    - Text selection drag displays start/end handles and floating selection toolbar.
@@ -28,7 +28,7 @@ index f3b1f49..2f16d4e 100644
  
  **Date:** November 15, 2026  
  **Branch:** `real-ui`  
--**Test Device:** Samsung Galaxy M32 (`32001776e8e82623`, 1080x2340 @ 420 dpi, density 2.625)  
+-**Test Device:** Samsung Galaxy M32 (`<device>`, 1080x2340 @ 420 dpi, density 2.625)  
 +**Test Device:** Samsung Galaxy M32 (`[REDACTED_DEVICE_SERIAL]`, 1080x2340 @ 420 dpi, density 2.625)  
  **Status:** Halted per user instruction for architectural audit and status reporting.
  
@@ -41,7 +41,7 @@ index bac7721..33f22a3 100644
  - Unit test in each module.
  - Instrumentation test verifying activity launch.
  - `tools/gates.sh` full execution.
--- Device run on Samsung Galaxy M32 (`32001776e8e82623`).
+-- Device run on Samsung Galaxy M32 (`<device>`).
 +- Device run on Samsung Galaxy M32 (`[REDACTED_DEVICE_SERIAL]`).
  - `python3 tools/guard.py .` -> `GUARD OK`.
 diff --git a/docs/slices/S00_REPORT.md b/docs/slices/S00_REPORT.md
@@ -52,7 +52,7 @@ index 5f60902..7d2c47e 100644
  **Date:** November 16, 2026  
  **Branch:** `s00-skeleton`  
  **Tag:** `s00-done`  
--**Target Device:** Samsung Galaxy M32 (`32001776e8e82623`, 1080x2340 @ 420 dpi)
+-**Target Device:** Samsung Galaxy M32 (`<device>`, 1080x2340 @ 420 dpi)
 +**Target Device:** Samsung Galaxy M32 (`[REDACTED_DEVICE_SERIAL]`, 1080x2340 @ 420 dpi)
  
  ---
@@ -61,7 +61,7 @@ index 5f60902..7d2c47e 100644
  - **Build & Assemble:** Clean compilation across all 4 modules (`:app`, `:design`, `:engine`, `:data`).
  - **Unit Tests:** `testDebugUnitTest` executed and passed on all modules.
  - **Lint Check:** `lintDebug` passed with 0 errors.
--- **Instrumentation Tests:** `connectedDebugAndroidTest` ran and passed on physical device `32001776e8e82623` (`TrebleDroid with GApps - 13`).
+-- **Instrumentation Tests:** `connectedDebugAndroidTest` ran and passed on physical device `<device>` (`TrebleDroid with GApps - 13`).
 +- **Instrumentation Tests:** `connectedDebugAndroidTest` ran and passed on physical device `[REDACTED_DEVICE_SERIAL]` (`TrebleDroid with GApps - 13`).
  - **App Launch Verified via Dumpsys:**
    ```

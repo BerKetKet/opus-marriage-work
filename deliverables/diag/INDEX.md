@@ -1,6 +1,6 @@
 # Screenshot Index (`deliverables/diag/INDEX.md`)
 
-This directory contains visual evidence captured from the physical Samsung Galaxy M30 / M32 (`SM-M305F`, Android 13) running the debug build of Opus Reader with the native Rust rendering engine (`NativeReaderEngine`).
+This directory contains visual evidence captured from the physical Samsung Galaxy M30 (`SM-M305F`, Android 13) running the debug build of Opus Reader with the native Rust rendering engine (`NativeReaderEngine`).
 
 | Filename | Screen ID | Canonical Screen Name | Verdict | Description |
 |---|---|---|---|---|

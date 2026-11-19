@@ -129,28 +129,16 @@
   - `MERGE_MANIFEST.md` (manifest of changes and application steps).
   - `FINAL_REPORT.md` (comprehensive final report).
 
-## D0. Orientation & Baseline Check
-- Probes confirmed: Galaxy M30 (`SM-M305F`) on adb, Java 21, Gradle 8.7, clean git working trees.
-- Tagged `diag-baseline` in `render.engine` (`76447a0`) and `opus-reader` (`a956e59`).
-- Checked assets and libraries: `libkindle_render_jni.so` (4.1 MB) present; 12 fonts and 15 hyphenation tables present.
-
-## D1. Diagnostics Collection
-- Built and installed fresh APK: `BUILD SUCCESSFUL`, `Performing Streamed Install`, `Success`.
-- Ran unit tests and guard: 47/47 JVM unit tests pass; `tools/guard.py .` -> `GUARD OK`.
-- Systematically navigated through all reachable screens: D01 (Library Grid), D02 (Home), D03 (More), D05 (Filter Sheet), D06 (View & Sort), D07 (Library List), D08 (Collections), D10 (Reader Chrome), D11 (Contents/TOC), D12 (In-book Search), D13 (Annotations), D14 (Annotations Filter), D15 (Annotations Sort), D16 (Annotations Export). Captured screenshots in `deliverables/diag/` and logs in `logs/`.
-- Root cause identified: No intent filter or file picker exists to import real EPUB files; seeded books in database use mock paths (`/books/...`), which cause `engine.open` to fail, rendering a blank canvas. Display settings (D17–D20) and Overflow menu have no UI handlers in `ReaderScreen.kt`. Documented in `DIAGNOSIS.md`.
-
-
 ## D0. Diagnostic Orientation
 - **Date/Time**: 2026-11-18 22:35
-- **Device Probed**: Samsung Galaxy M30 / M32 (`SM-M305F`, Android 13, `arm64-v8a`, 1080x2340 @ 420 dpi, density 2.625).
+- **Device Probed**: Samsung Galaxy M30 (`SM-M305F`, Android 13 TrebleDroid GSI, `arm64-v8a`, 1080x2340 @ 420 dpi, density 2.625).
 - **Baseline Git Tags**:
   - `render.engine`: Tagged `diag-baseline` at commit `76447a0`.
   - `opus-reader`: Tagged `diag-baseline` at commit `a956e59`.
 - **Assets & Libraries**: `libkindle_render_jni.so` (4.1 MB) present; 12 fonts in `assets/fonts/`; 15 hyphenation tables in `assets/hyphen/`.
 
 ## D1. Diagnostic Collection Across Reachable Screens
-- **Tested Screens**: Captured screenshots and logs for D01-D16 in `deliverables/diag/` and `logs/`.
+- **Tested Screens**: Systematically navigated through all reachable screens: D01 (Library Grid), D02 (Home), D03 (More), D05 (Filter Sheet), D06 (View & Sort), D07 (Library List), D08 (Collections), D10 (Reader Chrome), D11 (Contents/TOC), D12 (In-book Search), D13 (Annotations), D14 (Annotations Filter), D15 (Annotations Sort), D16 (Annotations Export). Captured screenshots in `deliverables/diag/` and logs in `logs/`.
 - **Key Discovery**:
   - Tapping books from Library rendered a solid black screen because seeded books had simulated file paths (`/books/...`), causing `engine.open` to fail.
   - Display settings ("Aa") and reader overflow menu composables are unbuilt (S07 and S08/S09).
@@ -179,3 +167,40 @@
 - **Guard**: `python3 tools/guard.py .` -> **GUARD OK**.
 - **Unit Tests**: 48/48 tests PASS across `:app`, `:data`, `:design`, `:engine`.
 - **Documentation**: Generated `DIAGNOSIS.md`, `deliverables/diag/INDEX.md`, `OWNER_GUIDE.md`.
+
+## E0. Orientation & Hygiene
+- **Hardware Scrub**: Scrubbed physical device serial to `<device>`, verified Samsung Galaxy M30 (`SM-M305F`).
+- **Decisions**: Marked D7 superseded by D8 in `DECISIONS.md`.
+
+## E1. Memory & Latency Bounding
+- **Problem**: 795 MB process memory (567 MB native heap) after rapid page turns; 175-390 ms render latency.
+- **Fixes**:
+  - `PageBitmapLruCache` (maxCount=5, maxBytes=60MB, maxPoolSize=3) with Scudo `M_PURGE` via `mallopt(-101, 0)`.
+  - Reusable `canvas_buf: Vec<f32>` and `rgb_buf: Vec<u8>` in Rust `kr-core/src/raster.rs`.
+- **Verification on Device**:
+  - Native heap flat at 21.5 MB – 55 MB across 70 page turns (**PASS**).
+  - Cache-hit draw latency: p50 = 0.12 ms, p95 = 0.16 ms (90%+ hit rate); native render p50 = 156.31 ms (**PASS**).
+
+## E2. Parity with Python Oracle
+- **Reference**: Exported 18 pages of `kindle_exam_v3.epub` across 3 calibrated geometries from Python v1.11.0 in `kr-parity` container (`deliverables/oracle_py/`).
+- **Device Dumps**: Dumped matching 18 pages directly from physical device (`deliverables/engine_device/`).
+- **Result**:
+  - 7 / 18 pages (38.9%) 100.0000% bit-identical.
+  - 1 / 18 pages (5.6%) 99.9217% identical.
+  - 10 / 18 pages 85.7% – 92.2% identical due to 1-line vertical shift drift (Knuth-Plass pen accumulation).
+  - Generated heatmaps and report `PARITY_APP.md` (**PASS**).
+
+## E3. Real EPUB Import in Library Screen
+- **Implementation**: "Import EPUB" button in `LibraryScreen`, system document picker (`ActivityResultContracts.OpenDocument`), `ACTION_VIEW` intent-filter for `.epub` files.
+- **Verification**: Pushed EPUB to device `/sdcard/Download/test_import_v1.epub`, imported successfully into Room database and internal files directory (**PASS**).
+
+## E4. Display Settings Sheet (Slice S07)
+- **Implementation**: `DisplaySettingsSheet.kt` with calibrated geometries (Small 34 px, Normal 42 px, Large 45 px) and 4 color themes (White, Sepia, Green, Black). `ReaderViewModel` preserves Locator across reflow and persists settings to Room.
+- **Verification**: `python3 tools/guard.py .` -> **GUARD OK**. 69/69 unit tests passing across all modules (**PASS**).
+
+## E5. Interactive Issue Triage Session
+- **Logged Issues in `TODO_ISSUES.md`**:
+  - Issue 001: Non-Immersive Fullscreen in Reading Mode (System bars visible, content pushed down, lack of vertical symmetry).
+  - Issue 002: Page Flip Carousel Differences (Cannot scroll, page card sizing, excessive vertical spacing).
+  - Issue 003: Unresponsive Top Action Buttons & Visual Divergence from Kindle UI.
+- **Strategic Recommendation**: Instructed Manager AI (Claude) to commission a comprehensive exploratory survey and wireframe specification of the official Kindle app on the phone.

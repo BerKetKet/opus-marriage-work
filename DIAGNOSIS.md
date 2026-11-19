@@ -8,8 +8,8 @@
 ## 1. Environment
 
 ### Device Info
-- **Model / Vendor**: Samsung Galaxy M30 / M32 (`SM-M305F` / `TrebleDroid_with_GApps`, `tdgsi_arm64_ab`)
-- **ADB Identifier**: `32001776e8e82623` (`device usb:1-5 product:treble_arm64_bgS model:TrebleDroid_with_GApps device:tdgsi_arm64_ab transport_id:2`)
+- **Model / Vendor**: Samsung Galaxy M30 (`SM-M305F`, TrebleDroid Android 13 GSI, `tdgsi_arm64_ab`)
+- **ADB Identifier**: `<device>` (`device usb:1-5 product:treble_arm64_bgS model:TrebleDroid_with_GApps device:tdgsi_arm64_ab`)
 - **OS & Architecture**: Android 13, `arm64-v8a`
 - **Display**: 1080x2340 @ 420 dpi, density 2.625
 

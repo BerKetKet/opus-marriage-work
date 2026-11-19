@@ -1,6 +1,6 @@
 # Owner Guide: Running Opus Reader with the Native Engine
 
-This guide explains how to build, install, and use Opus Reader on your Android device (`Samsung Galaxy M30 / M32`), and how to open and read EPUB books using the native Rust rendering engine (`NativeReaderEngine`).
+This guide explains how to build, install, and use Opus Reader on your Android device (`Samsung Galaxy M30`, `SM-M305F`), and how to open and read EPUB books using the native Rust rendering engine (`NativeReaderEngine`).
 
 All code changes in this session were AI-written.
 
