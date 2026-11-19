@@ -1,0 +1,128 @@
+commit c995d657af382af51e8aad74f2b9cc88db763230
+Author: BerKetKet <berketket@protonmail.com>
+Date:   Thu Nov 19 23:30:37 2026 +0300
+
+    docs: finalize stages E0-E5 status index, parity report, and defect tracker
+    
+    - Summarizes memory bounding (21.5-55MB flat native heap), parity analysis (7/18 bit-identical), real EPUB import, and Display Settings sheet
+    - Logs triaged defects 001-003 and strategic reference survey recommendation in TODO_ISSUES.md
+    - Updates DECISIONS.md (D16-D18), WORKLOG.md, and STATUS_INDEX.md
+    - Records submodule commits for opus-reader and render.engine
+
+ .gitignore                                         |   4 +
+ DECISIONS.md                                       |  24 ++-
+ DIAGNOSIS.md                                       |   4 +-
+ OWNER_GUIDE.md                                     |   2 +-
+ PARITY_APP.md                                      |  94 ++++++++++
+ STATUS_INDEX.md                                    | 115 ++++++++++++
+ TODO_ISSUES.md                                     |  63 +++++++
+ WORKLOG.md                                         |  53 ++++--
+ .../compare/compare_normal_p000_vs_e000.png        | Bin 0 -> 29923 bytes
+ .../compare/compare_normal_p001_vs_e001.png        | Bin 0 -> 159158 bytes
+ .../compare/compare_normal_p002_vs_e002.png        | Bin 0 -> 383176 bytes
+ .../compare/compare_normal_p010_vs_e010.png        | Bin 0 -> 331350 bytes
+ .../compare/compare_normal_p020_vs_e020.png        | Bin 0 -> 394840 bytes
+ .../compare/compare_normal_p030_vs_e030.png        | Bin 0 -> 487988 bytes
+ .../compare/compare_normal_p040_vs_e040.png        | Bin 0 -> 358855 bytes
+ .../compare/compare_normal_p050_vs_e050.png        | Bin 0 -> 360067 bytes
+ .../compare/compare_normal_p081_vs_e084.png        | Bin 0 -> 256785 bytes
+ .../compare/compare_small_p000_vs_e000.png         | Bin 0 -> 29923 bytes
+ .../compare/compare_small_p001_vs_e001.png         | Bin 0 -> 126148 bytes
+ .../compare/compare_small_p002_vs_e002.png         | Bin 0 -> 454443 bytes
+ .../compare/compare_small_p010_vs_e010.png         | Bin 0 -> 520597 bytes
+ .../compare/compare_small_p020_vs_e020.png         | Bin 0 -> 409419 bytes
+ .../compare/compare_small_p030_vs_e030.png         | Bin 0 -> 285557 bytes
+ .../compare/compare_small_p040_vs_e040.png         | Bin 0 -> 287272 bytes
+ .../compare/compare_small_p050_vs_e050.png         | Bin 0 -> 268341 bytes
+ .../compare/compare_small_p053_vs_e053.png         | Bin 0 -> 254074 bytes
+ deliverables/compare/parity_results.json           | 200 +++++++++++++++++++++
+ deliverables/diag/INDEX.md                         |   2 +-
+ deliverables/diag/chrome_check.png                 | Bin 0 -> 18987 bytes
+ deliverables/diag/import_success.png               | Bin 0 -> 18987 bytes
+ deliverables/diag/issue_001_cover_page.png         | Bin 0 -> 18987 bytes
+ .../diag/issue_001_kindle_layout_bounds.png        | Bin 0 -> 337261 bytes
+ .../diag/issue_001_kindle_page_margins_bounds.png  | Bin 0 -> 382720 bytes
+ .../diag/issue_002_kindle_cover_fullscreen_ref.png | Bin 0 -> 128572 bytes
+ .../diag/issue_002_kindle_page_flip_carousel.png   | Bin 0 -> 506133 bytes
+ .../diag/issue_002_our_app_chrome_page_bounds.png  | Bin 0 -> 332993 bytes
+ deliverables/diag/reflow_normal.png                | Bin 0 -> 18536 bytes
+ deliverables/opus-reader.patch                     |  10 +-
+ opus-reader                                        |   2 +-
+ render.engine                                      |   2 +-
+ 40 files changed, 546 insertions(+), 29 deletions(-)
+
+commit fd05113192c9361ebd786d6c6e3a5dd55c934e1a
+Author: BerKetKet <berketket@protonmail.com>
+Date:   Wed Nov 18 23:14:04 2026 +0300
+
+    docs: complete Stage D1-D3 diagnosis and real EPUB on-device display
+
+ DECISIONS.md                                      |  11 ++
+ DIAGNOSIS.md                                      | 121 ++++++++++++++++++++++
+ OWNER_GUIDE.md                                    |  96 +++++++++++++++++
+ WORKLOG.md                                        |  51 +++++++++
+ deliverables/diag/01_app_start.png                | Bin 0 -> 73718 bytes
+ deliverables/diag/02_library_grid.png             | Bin 0 -> 49953 bytes
+ deliverables/diag/03_library_filter_sheet.png     | Bin 0 -> 77867 bytes
+ deliverables/diag/04_library_view_sort_sheet.png  | Bin 0 -> 81207 bytes
+ deliverables/diag/05_library_list.png             | Bin 0 -> 118597 bytes
+ deliverables/diag/06_collections_empty.png        | Bin 0 -> 74115 bytes
+ deliverables/diag/07_more_screen.png              | Bin 0 -> 30277 bytes
+ deliverables/diag/08_library_search.png           | Bin 0 -> 120176 bytes
+ deliverables/diag/09_reader_open.png              | Bin 0 -> 15727 bytes
+ deliverables/diag/10_fixture_d10.png              | Bin 0 -> 45723 bytes
+ deliverables/diag/11_contents_toc.png             | Bin 0 -> 119967 bytes
+ deliverables/diag/12_reader_search.png            | Bin 0 -> 43941 bytes
+ deliverables/diag/13_annotations.png              | Bin 0 -> 57001 bytes
+ deliverables/diag/14_annotations_filter_sheet.png | Bin 0 -> 130769 bytes
+ deliverables/diag/15_annotations_sort_sheet.png   | Bin 0 -> 84852 bytes
+ deliverables/diag/16_annotations_export_sheet.png | Bin 0 -> 88394 bytes
+ deliverables/diag/17_display_settings.png         | Bin 0 -> 45723 bytes
+ deliverables/diag/18_exam3_page1.png              | Bin 0 -> 18987 bytes
+ deliverables/diag/19_exam3_page_middle.png        | Bin 0 -> 399463 bytes
+ deliverables/diag/20_exam3_page_last.png          | Bin 0 -> 27809 bytes
+ deliverables/diag/21_exam3_toc.png                | Bin 0 -> 156138 bytes
+ deliverables/diag/22_exam3_chapter_jump.png       | Bin 0 -> 325114 bytes
+ deliverables/diag/INDEX.md                        |  28 +++++
+ opus-reader                                       |   2 +-
+ 28 files changed, 308 insertions(+), 1 deletion(-)
+
+commit f7a532d786dc39709f0b81c2c7bf956a075e61e6
+Author: BerKetKet <berketket@protonmail.com>
+Date:   Wed Nov 18 16:56:34 2026 +0300
+
+    docs: add repository README with verification navigation and summary
+
+ README.md | 53 +++++++++++++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 53 insertions(+)
+
+commit 0d89c3f054bb0aab45ae55fc771e894e43a65aa2
+Author: BerKetKet <berketket@protonmail.com>
+Date:   Wed Nov 18 16:55:48 2026 +0300
+
+    feat(marriage): complete Rust port verification and Opus Reader integration deliverables
+
+ .gitignore                                         |   28 +
+ .gitmodules                                        |    6 +
+ BLOCKERS.md                                        |   24 +
+ DECISIONS.md                                       |   66 +
+ ENGINE_CONTRACT.md                                 |  176 ++
+ FINAL_REPORT.md                                    |  121 ++
+ MERGE_MANIFEST.md                                  |   59 +
+ NEXT_SESSION_PROMPT.md                             |   13 +
+ NOTES.md                                           |   42 +
+ PORTING_CHECKLIST.md                               |  183 ++
+ PY_QUIRKS.md                                       |   45 +
+ README_FIRST.md                                    |   21 +
+ RECON.md                                           |   84 +
+ REVIEW.md                                          |   80 +
+ RISKS.md                                           |   13 +
+ STATUS.md                                          |   26 +
+ VERIFICATION_LEDGER.md                             |  178 ++
+ WORKLOG.md                                         |  130 ++
+ .../jniLibs/arm64-v8a/libkindle_render_jni.so      |  Bin 0 -> 4241808 bytes
+ deliverables/opus-reader.patch                     |  252 +++
+ deliverables/render.engine.patch                   | 2148 ++++++++++++++++++++
+ opus-reader                                        |    1 +
+ render.engine                                      |    1 +
+ 23 files changed, 3697 insertions(+)

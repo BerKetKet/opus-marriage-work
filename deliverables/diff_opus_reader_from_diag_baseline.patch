@@ -1,0 +1,2237 @@
+diff --git a/app/src/androidTest/java/app/opusreader/LibraryScreenTest.kt b/app/src/androidTest/java/app/opusreader/LibraryScreenTest.kt
+index af08ff6..6ff17ea 100644
+--- a/app/src/androidTest/java/app/opusreader/LibraryScreenTest.kt
++++ b/app/src/androidTest/java/app/opusreader/LibraryScreenTest.kt
+@@ -108,6 +108,8 @@ class LibraryScreenTest {
+                     onCreateCollection = viewModel::onCreateCollection,
+                     onGroupBySeriesChange = viewModel::setGroupBySeries,
+                     onApplyFilterState = viewModel::onApplyFilterState,
++                    onImportClick = { },
++                    onDismissError = { },
+                     modifier = Modifier.testTag("library_screen_test")
+                 )
+             }
+@@ -149,6 +151,8 @@ class LibraryScreenTest {
+                     onCreateCollection = viewModel::onCreateCollection,
+                     onGroupBySeriesChange = viewModel::setGroupBySeries,
+                     onApplyFilterState = viewModel::onApplyFilterState,
++                    onImportClick = { },
++                    onDismissError = { },
+                     modifier = Modifier.testTag("library_screen_test")
+                 )
+             }
+@@ -214,6 +218,8 @@ class LibraryScreenTest {
+                     onCreateCollection = viewModel::onCreateCollection,
+                     onGroupBySeriesChange = viewModel::setGroupBySeries,
+                     onApplyFilterState = viewModel::onApplyFilterState,
++                    onImportClick = { },
++                    onDismissError = { },
+                     modifier = Modifier.testTag("library_screen_test")
+                 )
+             }
+diff --git a/app/src/androidTest/java/app/opusreader/ReaderScreenTest.kt b/app/src/androidTest/java/app/opusreader/ReaderScreenTest.kt
+index 6ae9e25..626fef2 100644
+--- a/app/src/androidTest/java/app/opusreader/ReaderScreenTest.kt
++++ b/app/src/androidTest/java/app/opusreader/ReaderScreenTest.kt
+@@ -172,7 +172,8 @@ class ReaderScreenTest {
+                     onNextSearchHit = {},
+                     onPreviousSearchHit = {},
+                     onSetAnnotationFilter = {},
+-                    onSetAnnotationSort = {}
++                    onSetAnnotationSort = {},
++                    onUpdateDisplaySettings = { _, _ -> }
+                 )
+             }
+         }
+@@ -234,7 +235,8 @@ class ReaderScreenTest {
+                     onNextSearchHit = {},
+                     onPreviousSearchHit = {},
+                     onSetAnnotationFilter = {},
+-                    onSetAnnotationSort = {}
++                    onSetAnnotationSort = {},
++                    onUpdateDisplaySettings = { _, _ -> }
+                 )
+             }
+         }
+@@ -296,7 +298,8 @@ class ReaderScreenTest {
+                     onNextSearchHit = {},
+                     onPreviousSearchHit = {},
+                     onSetAnnotationFilter = {},
+-                    onSetAnnotationSort = {}
++                    onSetAnnotationSort = {},
++                    onUpdateDisplaySettings = { _, _ -> }
+                 )
+             }
+         }
+@@ -360,7 +363,8 @@ class ReaderScreenTest {
+                     onNextSearchHit = {},
+                     onPreviousSearchHit = {},
+                     onSetAnnotationFilter = {},
+-                    onSetAnnotationSort = {}
++                    onSetAnnotationSort = {},
++                    onUpdateDisplaySettings = { _, _ -> }
+                 )
+             }
+         }
+@@ -422,7 +426,8 @@ class ReaderScreenTest {
+                     onNextSearchHit = {},
+                     onPreviousSearchHit = {},
+                     onSetAnnotationFilter = {},
+-                    onSetAnnotationSort = {}
++                    onSetAnnotationSort = {},
++                    onUpdateDisplaySettings = { _, _ -> }
+                 )
+             }
+         }
+@@ -492,7 +497,8 @@ class ReaderScreenTest {
+                     onNextSearchHit = {},
+                     onPreviousSearchHit = {},
+                     onSetAnnotationFilter = {},
+-                    onSetAnnotationSort = {}
++                    onSetAnnotationSort = {},
++                    onUpdateDisplaySettings = { _, _ -> }
+                 )
+             }
+         }
+@@ -555,7 +561,8 @@ class ReaderScreenTest {
+                     onNextSearchHit = {},
+                     onPreviousSearchHit = {},
+                     onSetAnnotationFilter = {},
+-                    onSetAnnotationSort = {}
++                    onSetAnnotationSort = {},
++                    onUpdateDisplaySettings = { _, _ -> }
+                 )
+             }
+         }
+@@ -613,7 +620,8 @@ class ReaderScreenTest {
+                     onNextSearchHit = {},
+                     onPreviousSearchHit = {},
+                     onSetAnnotationFilter = {},
+-                    onSetAnnotationSort = {}
++                    onSetAnnotationSort = {},
++                    onUpdateDisplaySettings = { _, _ -> }
+                 )
+             }
+         }
+@@ -672,7 +680,8 @@ class ReaderScreenTest {
+                     onNextSearchHit = {},
+                     onPreviousSearchHit = {},
+                     onSetAnnotationFilter = {},
+-                    onSetAnnotationSort = {}
++                    onSetAnnotationSort = {},
++                    onUpdateDisplaySettings = { _, _ -> }
+                 )
+             }
+         }
+@@ -730,7 +739,8 @@ class ReaderScreenTest {
+                     onNextSearchHit = {},
+                     onPreviousSearchHit = {},
+                     onSetAnnotationFilter = { selectedFilter = it },
+-                    onSetAnnotationSort = {}
++                    onSetAnnotationSort = {},
++                    onUpdateDisplaySettings = { _, _ -> }
+                 )
+             }
+         }
+diff --git a/app/src/debug/java/app/opusreader/debug/DebugFixtureController.kt b/app/src/debug/java/app/opusreader/debug/DebugFixtureController.kt
+index dc2e555..49bd900 100644
+--- a/app/src/debug/java/app/opusreader/debug/DebugFixtureController.kt
++++ b/app/src/debug/java/app/opusreader/debug/DebugFixtureController.kt
+@@ -61,10 +61,11 @@ object DebugFixtureController {
+         }
+     }
+ 
+-    fun handleFixtureDeepLink(context: Context, fixtureUri: String) {
++    fun handleFixtureDeepLink(context: Context, fixtureUri: String, onBookReady: (String) -> Unit = {}) {
+         android.util.Log.d("OpusDebug", "handleFixtureDeepLink received: $fixtureUri")
+         val uri = Uri.parse(fixtureUri)
+-        val fixtureId = uri.lastPathSegment?.uppercase() ?: return
++        val host = uri.host?.lowercase() ?: ""
++        val fixtureId = uri.lastPathSegment?.uppercase() ?: ""
+         val isLiveness = uri.getQueryParameter("liveness") == "1"
+ 
+         val app = context.applicationContext as OpusApplication
+@@ -73,6 +74,32 @@ object DebugFixtureController {
+         val settingsRepo = app.container.settingsRepository
+ 
+         CoroutineScope(Dispatchers.IO).launch {
++            if (host == "open" || fixtureId == "OPEN") {
++                val path = uri.getQueryParameter("path") ?: "/sdcard/Download/kindle_exam_v3.epub"
++                val geometryParam = uri.getQueryParameter("geometry")?.toIntOrNull()
++                if (geometryParam != null) {
++                    settingsRepo.updateGeometryIndex(geometryParam)
++                }
++                val file = java.io.File(path)
++                android.util.Log.i("OpusDebug", "handleFixtureDeepLink: opening real EPUB at $path (exists=${file.exists()})")
++                if (file.exists()) {
++                    val importer = app.container.libraryRepository.createImporter(context)
++                    val result = file.inputStream().use { stream ->
++                        importer.importFromStream(stream, file.name)
++                    }
++                    result.onSuccess { book ->
++                        android.util.Log.i("OpusDebug", "Imported real book: ${book.title} (id=${book.id}, path=${book.filePath})")
++                        withContext(Dispatchers.Main) {
++                            onBookReady(book.id)
++                        }
++                    }.onFailure { err ->
++                        android.util.Log.e("OpusDebug", "Failed to import EPUB: ${err.message}", err)
++                    }
++                } else {
++                    android.util.Log.e("OpusDebug", "File not found at $path")
++                }
++                return@launch
++            }
+             when (fixtureId) {
+                 "D01", "D07" -> {
+                     // Seed standard 12 reference books
+diff --git a/app/src/main/AndroidManifest.xml b/app/src/main/AndroidManifest.xml
+index 2d836e9..71eaa4e 100644
+--- a/app/src/main/AndroidManifest.xml
++++ b/app/src/main/AndroidManifest.xml
+@@ -1,9 +1,13 @@
+ <?xml version="1.0" encoding="utf-8"?>
+ <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+ 
++    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
++    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
++
+     <application
+         android:name=".OpusApplication"
+         android:allowBackup="true"
++        android:requestLegacyExternalStorage="true"
+         android:icon="@android:drawable/sym_def_app_icon"
+         android:label="Opus Reader"
+         android:roundIcon="@android:drawable/sym_def_app_icon"
+@@ -27,6 +31,34 @@
+                     android:scheme="opus"
+                     android:host="fixture" />
+             </intent-filter>
++
++            <intent-filter>
++                <action android:name="android.intent.action.VIEW" />
++                <category android:name="android.intent.category.DEFAULT" />
++                <category android:name="android.intent.category.BROWSABLE" />
++                <data
++                    android:scheme="opus"
++                    android:host="open" />
++            </intent-filter>
++
++            <intent-filter>
++                <action android:name="android.intent.action.VIEW" />
++                <category android:name="android.intent.category.DEFAULT" />
++                <category android:name="android.intent.category.BROWSABLE" />
++                <data android:scheme="content" />
++                <data android:scheme="file" />
++                <data android:mimeType="application/epub+zip" />
++            </intent-filter>
++
++            <intent-filter>
++                <action android:name="android.intent.action.VIEW" />
++                <category android:name="android.intent.category.DEFAULT" />
++                <category android:name="android.intent.category.BROWSABLE" />
++                <data android:scheme="content" />
++                <data android:scheme="file" />
++                <data android:host="*" />
++                <data android:pathPattern=".*\\.epub" />
++            </intent-filter>
+         </activity>
+     </application>
+ 
+diff --git a/app/src/main/java/app/opusreader/MainActivity.kt b/app/src/main/java/app/opusreader/MainActivity.kt
+index 2221e1a..425fcde 100644
+--- a/app/src/main/java/app/opusreader/MainActivity.kt
++++ b/app/src/main/java/app/opusreader/MainActivity.kt
+@@ -4,6 +4,10 @@ import android.content.Intent
+ import android.os.Bundle
+ import androidx.activity.ComponentActivity
+ import androidx.activity.compose.setContent
++import androidx.lifecycle.lifecycleScope
++import kotlinx.coroutines.Dispatchers
++import kotlinx.coroutines.launch
++import kotlinx.coroutines.withContext
+ import androidx.compose.foundation.layout.fillMaxSize
+ import androidx.compose.material3.Surface
+ import androidx.compose.runtime.mutableStateOf
+@@ -38,12 +42,37 @@ class MainActivity : ComponentActivity() {
+     }
+ 
+     private fun handleIntent(intent: Intent?) {
+-        val data = intent?.data
+-        if (data != null && data.scheme == "opus" && data.host == "fixture") {
+-            val uriStr = data.toString()
++        val data = intent?.data ?: return
++        val uriStr = data.toString()
++        android.util.Log.d("OpusDebug", "MainActivity handleIntent: $uriStr")
++        if (data.scheme == "opus" && (data.host == "fixture" || data.host == "open")) {
+             deepLinkUriState.value = uriStr
+-            android.util.Log.d("OpusDebug", "MainActivity handleIntent: $uriStr")
+-            app.opusreader.debug.DebugFixtureController.handleFixtureDeepLink(this, uriStr)
++            app.opusreader.debug.DebugFixtureController.handleFixtureDeepLink(this, uriStr) { bookId ->
++                deepLinkUriState.value = "reader/$bookId"
++            }
++        } else if (intent?.action == Intent.ACTION_VIEW && (data.scheme == "content" || data.scheme == "file")) {
++            val app = applicationContext as OpusApplication
++            val importer = app.container.libraryRepository.createImporter(this)
++            lifecycleScope.launch(Dispatchers.IO) {
++                try {
++                    val stream = try {
++                        contentResolver.openInputStream(data)
++                    } catch (_: Throwable) {
++                        if (data.scheme == "file" && data.path != null) {
++                            java.io.File(data.path!!).inputStream()
++                        } else null
++                    } ?: return@launch
++                    val name = data.lastPathSegment ?: "imported.epub"
++                    val result = stream.use { importer.importFromStream(it, name) }
++                    result.onSuccess { book ->
++                        withContext(Dispatchers.Main) {
++                            deepLinkUriState.value = "reader/${book.id}"
++                        }
++                    }
++                } catch (e: Throwable) {
++                    android.util.Log.e("OpusDebug", "Failed to import via VIEW intent: ${e.message}", e)
++                }
++            }
+         }
+     }
+ }
+diff --git a/app/src/main/java/app/opusreader/di/AndroidEngineAssets.kt b/app/src/main/java/app/opusreader/di/AndroidEngineAssets.kt
+index ec92bf0..e96d384 100644
+--- a/app/src/main/java/app/opusreader/di/AndroidEngineAssets.kt
++++ b/app/src/main/java/app/opusreader/di/AndroidEngineAssets.kt
+@@ -40,10 +40,10 @@ class AndroidEngineAssets(
+     override fun hyphenationBytes(lang: String): ByteArray? {
+         val normalized = lang.trim().lowercase().take(2).ifEmpty { "en" }
+         val candidates = when (normalized) {
+-            "en" -> listOf("hyph/hyph_en_YJ.bin", "hyph/hyph_en_us.dic", "hyph_en_YJ.bin", "hyph_en_us.dic")
+-            "de" -> listOf("hyph/hyph_de_DE.dic", "hyph/hyph_de.bin", "hyph_de_DE.dic", "hyph_de.bin")
+-            "fr" -> listOf("hyph/hyph_fr.dic", "hyph/hyph_fr.bin", "hyph_fr.dic", "hyph_fr.bin")
+-            else -> listOf("hyph/hyph_${normalized}.bin", "hyph_${normalized}.bin")
++            "en" -> listOf("hyphen/hyph_en_YJ.bin", "hyphen/hyph_en_us.dic", "hyph/hyph_en_YJ.bin", "hyph/hyph_en_us.dic", "hyph_en_YJ.bin", "hyph_en_us.dic")
++            "de" -> listOf("hyphen/hyph_de_DE.dic", "hyphen/hyph_de.bin", "hyph/hyph_de_DE.dic", "hyph/hyph_de.bin", "hyph_de_DE.dic", "hyph_de.bin")
++            "fr" -> listOf("hyphen/hyph_fr.dic", "hyphen/hyph_fr.bin", "hyph/hyph_fr.dic", "hyph/hyph_fr.bin", "hyph_fr.dic", "hyph_fr.bin")
++            else -> listOf("hyphen/hyph_${normalized}.bin", "hyph/hyph_${normalized}.bin", "hyph_${normalized}.bin")
+         }
+         for (candidate in candidates) {
+             try {
+diff --git a/app/src/main/java/app/opusreader/feature/library/LibraryScreen.kt b/app/src/main/java/app/opusreader/feature/library/LibraryScreen.kt
+index a298017..cedd666 100644
+--- a/app/src/main/java/app/opusreader/feature/library/LibraryScreen.kt
++++ b/app/src/main/java/app/opusreader/feature/library/LibraryScreen.kt
+@@ -30,6 +30,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
+ import androidx.compose.material.icons.automirrored.filled.FormatListBulleted
+ import androidx.compose.material.icons.filled.Add
+ import androidx.compose.material.icons.filled.Check
++import androidx.compose.material.icons.filled.Close
+ import androidx.compose.material.icons.filled.Folder
+ import androidx.compose.material.icons.filled.GridView
+ import androidx.compose.material.icons.filled.KeyboardArrowDown
+@@ -42,8 +43,10 @@ import androidx.compose.material3.ButtonDefaults
+ import androidx.compose.material3.HorizontalDivider
+ import androidx.compose.material3.Icon
+ import androidx.compose.material3.IconButton
++import androidx.compose.material3.LinearProgressIndicator
+ import androidx.compose.material3.OutlinedTextField
+ import androidx.compose.material3.OutlinedTextFieldDefaults
++import androidx.compose.material3.Surface
+ import androidx.compose.material3.Switch
+ import androidx.compose.material3.SwitchDefaults
+ import androidx.compose.material3.Text
+@@ -95,6 +98,8 @@ fun LibraryScreen(
+     onCreateCollection: (String) -> Unit,
+     onGroupBySeriesChange: (Boolean) -> Unit,
+     onApplyFilterState: (LibraryFilterState) -> Unit,
++    onImportClick: () -> Unit,
++    onDismissError: () -> Unit,
+     modifier: Modifier = Modifier
+ ) {
+     val gridState = rememberLazyGridState()
+@@ -124,6 +129,16 @@ fun LibraryScreen(
+                     }
+                 } else null,
+                 actions = {
++                    IconButton(
++                        onClick = onImportClick,
++                        modifier = Modifier.testTag("library_import_button")
++                    ) {
++                        Icon(
++                            imageVector = Icons.Default.Add,
++                            contentDescription = "Import EPUB",
++                            tint = OpusColors.TextPrimaryDark
++                        )
++                    }
+                     IconButton(
+                         onClick = { onOpenSheet(ActiveSheet.FILTER, null) },
+                         modifier = Modifier.testTag("library_filter_button")
+@@ -173,6 +188,48 @@ fun LibraryScreen(
+                 color = OpusColors.DividerDark
+             )
+ 
++            if (uiState.isImporting) {
++                LinearProgressIndicator(
++                    modifier = Modifier
++                        .fillMaxWidth()
++                        .testTag("library_import_progress"),
++                    color = OpusColors.AccentBlue
++                )
++            }
++
++            if (uiState.errorMessage != null) {
++                Surface(
++                    color = OpusColors.SurfaceDark,
++                    modifier = Modifier
++                        .fillMaxWidth()
++                        .padding(horizontal = OpusDimensions.ScreenMarginHorizontal, vertical = OpusDimensions.SpacingSmall)
++                        .testTag("library_error_banner"),
++                    shape = RoundedCornerShape(OpusDimensions.CornerRadiusSmall)
++                ) {
++                    Row(
++                        modifier = Modifier.padding(OpusDimensions.SpacingMedium),
++                        verticalAlignment = Alignment.CenterVertically
++                    ) {
++                        Text(
++                            text = uiState.errorMessage,
++                            color = OpusColors.TextPrimaryDark,
++                            style = OpusTypography.bodyMedium,
++                            modifier = Modifier.weight(1f)
++                        )
++                        IconButton(
++                            onClick = onDismissError,
++                            modifier = Modifier.testTag("library_dismiss_error_button")
++                        ) {
++                            Icon(
++                                imageVector = Icons.Default.Close,
++                                contentDescription = "Dismiss error",
++                                tint = OpusColors.TextSecondaryDark
++                            )
++                        }
++                    }
++                }
++            }
++
+             // Main Content Area based on ViewMode
+             Box(
+                 modifier = Modifier
+diff --git a/app/src/main/java/app/opusreader/feature/library/LibraryUiState.kt b/app/src/main/java/app/opusreader/feature/library/LibraryUiState.kt
+index d89ec94..374915b 100644
+--- a/app/src/main/java/app/opusreader/feature/library/LibraryUiState.kt
++++ b/app/src/main/java/app/opusreader/feature/library/LibraryUiState.kt
+@@ -71,5 +71,7 @@ data class LibraryUiState(
+     val lastReadBook: BookUiModel? = null,
+     val activeSheet: ActiveSheet? = null,
+     val selectedBookForMenu: BookUiModel? = null,
+-    val newCollectionNameInput: String = ""
++    val newCollectionNameInput: String = "",
++    val isImporting: Boolean = false,
++    val errorMessage: String? = null
+ )
+diff --git a/app/src/main/java/app/opusreader/feature/library/LibraryViewModel.kt b/app/src/main/java/app/opusreader/feature/library/LibraryViewModel.kt
+index ad70b61..ca67ba5 100644
+--- a/app/src/main/java/app/opusreader/feature/library/LibraryViewModel.kt
++++ b/app/src/main/java/app/opusreader/feature/library/LibraryViewModel.kt
+@@ -1,17 +1,22 @@
+ package app.opusreader.feature.library
+ 
++import android.content.Context
++import android.net.Uri
+ import androidx.lifecycle.ViewModel
+ import androidx.lifecycle.ViewModelProvider
+ import androidx.lifecycle.viewModelScope
+ import app.opusreader.data.entity.BookEntity
+ import app.opusreader.data.repository.LibraryRepository
+ import app.opusreader.data.repository.SettingsRepository
++import kotlinx.coroutines.Dispatchers
+ import kotlinx.coroutines.flow.MutableStateFlow
+ import kotlinx.coroutines.flow.StateFlow
+ import kotlinx.coroutines.flow.asStateFlow
+ import kotlinx.coroutines.flow.combine
+ import kotlinx.coroutines.flow.update
+ import kotlinx.coroutines.launch
++import kotlinx.coroutines.withContext
++import java.io.InputStream
+ 
+ class LibraryViewModel(
+     private val libraryRepository: LibraryRepository,
+@@ -259,6 +264,74 @@ class LibraryViewModel(
+         }
+     }
+ 
++    fun importFromStream(
++        context: Context?,
++        inputStream: InputStream,
++        filename: String? = null,
++        onComplete: ((Result<BookEntity>) -> Unit)? = null
++    ) {
++        viewModelScope.launch {
++            _uiState.update { it.copy(isImporting = true, errorMessage = null) }
++            val result = withContext(Dispatchers.IO) {
++                try {
++                    libraryRepository.importBook(inputStream, filename, context)
++                } catch (e: Throwable) {
++                    Result.failure(e)
++                }
++            }
++            result.onSuccess { book ->
++                _uiState.update { it.copy(isImporting = false, errorMessage = null) }
++                onComplete?.invoke(Result.success(book))
++            }.onFailure { err ->
++                _uiState.update {
++                    it.copy(
++                        isImporting = false,
++                        errorMessage = "Failed to import EPUB: ${err.message ?: "Invalid file"}"
++                    )
++                }
++                onComplete?.invoke(Result.failure(err))
++            }
++        }
++    }
++
++    fun importEpubUri(
++        context: Context,
++        uri: Uri,
++        onComplete: ((Result<BookEntity>) -> Unit)? = null
++    ) {
++        viewModelScope.launch {
++            _uiState.update { it.copy(isImporting = true, errorMessage = null) }
++            val result = withContext(Dispatchers.IO) {
++                try {
++                    val stream = context.contentResolver.openInputStream(uri)
++                        ?: return@withContext Result.failure<BookEntity>(java.io.IOException("Cannot open input stream for $uri"))
++                    stream.use { s ->
++                        val filename = uri.lastPathSegment ?: "imported.epub"
++                        libraryRepository.importBook(s, filename, context)
++                    }
++                } catch (e: Throwable) {
++                    Result.failure(e)
++                }
++            }
++            result.onSuccess { book ->
++                _uiState.update { it.copy(isImporting = false, errorMessage = null) }
++                onComplete?.invoke(Result.success(book))
++            }.onFailure { err ->
++                _uiState.update {
++                    it.copy(
++                        isImporting = false,
++                        errorMessage = "Failed to import EPUB: ${err.message ?: "Invalid file"}"
++                    )
++                }
++                onComplete?.invoke(Result.failure(err))
++            }
++        }
++    }
++
++    fun onDismissError() {
++        _uiState.update { it.copy(errorMessage = null) }
++    }
++
+     companion object {
+         fun provideFactory(
+             libraryRepository: LibraryRepository,
+diff --git a/app/src/main/java/app/opusreader/feature/reader/DisplaySettingsSheet.kt b/app/src/main/java/app/opusreader/feature/reader/DisplaySettingsSheet.kt
+new file mode 100644
+index 0000000..8293ec6
+--- /dev/null
++++ b/app/src/main/java/app/opusreader/feature/reader/DisplaySettingsSheet.kt
+@@ -0,0 +1,237 @@
++package app.opusreader.feature.reader
++
++import androidx.compose.foundation.background
++import androidx.compose.foundation.border
++import androidx.compose.foundation.clickable
++import androidx.compose.foundation.layout.Arrangement
++import androidx.compose.foundation.layout.Box
++import androidx.compose.foundation.layout.Column
++import androidx.compose.foundation.layout.Row
++import androidx.compose.foundation.layout.Spacer
++import androidx.compose.foundation.layout.fillMaxSize
++import androidx.compose.foundation.layout.fillMaxWidth
++import androidx.compose.foundation.layout.height
++import androidx.compose.foundation.layout.padding
++import androidx.compose.foundation.layout.size
++import androidx.compose.foundation.shape.CircleShape
++import androidx.compose.foundation.shape.RoundedCornerShape
++import androidx.compose.material.icons.Icons
++import androidx.compose.material.icons.filled.Close
++import androidx.compose.material3.HorizontalDivider
++import androidx.compose.material3.Icon
++import androidx.compose.material3.IconButton
++import androidx.compose.material3.Surface
++import androidx.compose.material3.Text
++import androidx.compose.runtime.Composable
++import androidx.compose.runtime.getValue
++import androidx.compose.runtime.mutableStateOf
++import androidx.compose.runtime.remember
++import androidx.compose.runtime.setValue
++import androidx.compose.ui.Alignment
++import androidx.compose.ui.Modifier
++import androidx.compose.ui.draw.clip
++import androidx.compose.ui.graphics.Color
++import androidx.compose.ui.platform.testTag
++import androidx.compose.ui.text.font.FontWeight
++import app.opusreader.design.component.OpusBottomSheet
++import app.opusreader.design.theme.OpusColors
++import app.opusreader.design.theme.OpusDimensions
++import app.opusreader.design.theme.OpusTypography
++
++enum class DisplaySettingsTab {
++    FONT,
++    THEMES
++}
++
++@Composable
++fun DisplaySettingsSheet(
++    currentGeometryIndex: Int,
++    currentThemeIndex: Int,
++    onSelectGeometryIndex: (Int) -> Unit,
++    onSelectThemeIndex: (Int) -> Unit,
++    onDismiss: () -> Unit
++) {
++    var activeTab by remember { mutableStateOf(DisplaySettingsTab.FONT) }
++
++    OpusBottomSheet(
++        visible = true,
++        onDismissRequest = onDismiss,
++        expandedHeight = OpusDimensions.DisplaySettingsSheetHeight,
++        backgroundColor = OpusColors.SheetDisplaySettingsDark,
++        scrimColor = OpusColors.ScrimDark,
++        showDragHandle = true,
++        modifier = Modifier.testTag("display_settings_sheet")
++    ) {
++        Column(
++            modifier = Modifier
++                .fillMaxWidth()
++                .padding(horizontal = OpusDimensions.ScreenMarginHorizontal, vertical = OpusDimensions.SpacingSmall)
++        ) {
++            // Header / Tab row
++            Row(
++                modifier = Modifier
++                    .fillMaxWidth()
++                    .padding(bottom = OpusDimensions.SpacingMedium),
++                horizontalArrangement = Arrangement.SpaceBetween,
++                verticalAlignment = Alignment.CenterVertically
++            ) {
++                Row(horizontalArrangement = Arrangement.spacedBy(OpusDimensions.SpacingStandard)) {
++                    Text(
++                        text = "Font",
++                        color = if (activeTab == DisplaySettingsTab.FONT) OpusColors.TextPrimaryDark else OpusColors.TextSecondaryDark,
++                        style = OpusTypography.titleMedium,
++                        fontWeight = if (activeTab == DisplaySettingsTab.FONT) FontWeight.Bold else FontWeight.Normal,
++                        modifier = Modifier
++                            .clickable { activeTab = DisplaySettingsTab.FONT }
++                            .testTag("settings_tab_font")
++                    )
++                    Text(
++                        text = "Themes & Color",
++                        color = if (activeTab == DisplaySettingsTab.THEMES) OpusColors.TextPrimaryDark else OpusColors.TextSecondaryDark,
++                        style = OpusTypography.titleMedium,
++                        fontWeight = if (activeTab == DisplaySettingsTab.THEMES) FontWeight.Bold else FontWeight.Normal,
++                        modifier = Modifier
++                            .clickable { activeTab = DisplaySettingsTab.THEMES }
++                            .testTag("settings_tab_themes")
++                    )
++                }
++                IconButton(
++                    onClick = onDismiss,
++                    modifier = Modifier.testTag("settings_close_button")
++                ) {
++                    Icon(
++                        imageVector = Icons.Default.Close,
++                        contentDescription = "Close",
++                        tint = OpusColors.TextSecondaryDark
++                    )
++                }
++            }
++
++            HorizontalDivider(color = OpusColors.DividerDark)
++            Spacer(modifier = Modifier.height(OpusDimensions.SpacingMedium))
++
++            when (activeTab) {
++                DisplaySettingsTab.FONT -> {
++                    // Font Family row
++                    Row(
++                        modifier = Modifier.fillMaxWidth(),
++                        horizontalArrangement = Arrangement.SpaceBetween,
++                        verticalAlignment = Alignment.CenterVertically
++                    ) {
++                        Text(
++                            text = "Font Family",
++                            color = OpusColors.TextSecondaryDark,
++                            style = OpusTypography.bodyMedium
++                        )
++                        Text(
++                            text = "Bookerly (Calibrated)",
++                            color = OpusColors.TextPrimaryDark,
++                            style = OpusTypography.bodyMedium,
++                            fontWeight = FontWeight.Medium
++                        )
++                    }
++
++                    Spacer(modifier = Modifier.height(OpusDimensions.SpacingLarge))
++
++                    // Font Size Step selector (Small 34px, Normal 42px, Large 45px)
++                    Text(
++                        text = "Size & Spacing (Calibrated Presets)",
++                        color = OpusColors.TextSecondaryDark,
++                        style = OpusTypography.labelMedium
++                    )
++                    Spacer(modifier = Modifier.height(OpusDimensions.SpacingSmall))
++
++                    Row(
++                        modifier = Modifier.fillMaxWidth(),
++                        horizontalArrangement = Arrangement.spacedBy(OpusDimensions.SpacingSmall)
++                    ) {
++                        val presets = listOf(
++                            Triple(0, "Small", "34 px"),
++                            Triple(1, "Normal", "42 px"),
++                            Triple(3, "Large", "45 px")
++                        )
++                        for ((idx, label, sub) in presets) {
++                            val isSelected = currentGeometryIndex == idx
++                            Surface(
++                                color = if (isSelected) OpusColors.AccentBlue else OpusColors.SurfaceDark,
++                                shape = RoundedCornerShape(OpusDimensions.CornerRadiusSmall),
++                                modifier = Modifier
++                                    .weight(1f)
++                                    .height(OpusDimensions.DisplaySettingsPresetHeight)
++                                    .clickable { onSelectGeometryIndex(idx) }
++                                    .testTag("font_size_preset_$idx")
++                            ) {
++                                Column(
++                                    modifier = Modifier.fillMaxSize(),
++                                    horizontalAlignment = Alignment.CenterHorizontally,
++                                    verticalArrangement = Arrangement.Center
++                                ) {
++                                    Text(
++                                        text = label,
++                                        color = if (isSelected) Color.White else OpusColors.TextPrimaryDark,
++                                        style = OpusTypography.bodyMedium,
++                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
++                                    )
++                                    Text(
++                                        text = sub,
++                                        color = if (isSelected) Color.White.copy(alpha = 0.8f) else OpusColors.TextSecondaryDark,
++                                        style = OpusTypography.labelSmall
++                                    )
++                                }
++                            }
++                        }
++                    }
++                }
++                DisplaySettingsTab.THEMES -> {
++                    Text(
++                        text = "Page Color Theme",
++                        color = OpusColors.TextSecondaryDark,
++                        style = OpusTypography.labelMedium
++                    )
++                    Spacer(modifier = Modifier.height(OpusDimensions.SpacingMedium))
++
++                    Row(
++                        modifier = Modifier.fillMaxWidth(),
++                        horizontalArrangement = Arrangement.SpaceEvenly
++                    ) {
++                        val themes = listOf(
++                            Pair(0, "White" to OpusColors.PageWhite),
++                            Pair(1, "Sepia" to OpusColors.PageSepia),
++                            Pair(2, "Green" to OpusColors.PageGreen),
++                            Pair(3, "Black" to OpusColors.PageBlack)
++                        )
++                        for ((idx, info) in themes) {
++                            val (name, color) = info
++                            val isSelected = currentThemeIndex == idx
++                            Column(
++                                horizontalAlignment = Alignment.CenterHorizontally,
++                                modifier = Modifier
++                                    .clickable { onSelectThemeIndex(idx) }
++                                    .testTag("theme_swatch_$idx")
++                            ) {
++                                Box(
++                                    modifier = Modifier
++                                        .size(OpusDimensions.DisplaySettingsSwatchSize)
++                                        .clip(CircleShape)
++                                        .background(color)
++                                        .border(
++                                            width = if (isSelected) OpusDimensions.BorderThicknessSelected else OpusDimensions.DividerThickness,
++                                            color = if (isSelected) OpusColors.AccentBlue else OpusColors.BorderDark,
++                                            shape = CircleShape
++                                        )
++                                )
++                                Spacer(modifier = Modifier.height(OpusDimensions.SpacingXSmall))
++                                Text(
++                                    text = name,
++                                    color = if (isSelected) OpusColors.TextPrimaryDark else OpusColors.TextSecondaryDark,
++                                    style = OpusTypography.labelSmall,
++                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
++                                )
++                            }
++                        }
++                    }
++                }
++            }
++        }
++    }
++}
+diff --git a/app/src/main/java/app/opusreader/feature/reader/ReaderScreen.kt b/app/src/main/java/app/opusreader/feature/reader/ReaderScreen.kt
+index 6f1320a..dd551f0 100644
+--- a/app/src/main/java/app/opusreader/feature/reader/ReaderScreen.kt
++++ b/app/src/main/java/app/opusreader/feature/reader/ReaderScreen.kt
+@@ -111,6 +111,7 @@ fun ReaderScreen(
+     onPreviousSearchHit: () -> Unit,
+     onSetAnnotationFilter: (AnnotationFilter) -> Unit,
+     onSetAnnotationSort: (AnnotationSort) -> Unit,
++    onUpdateDisplaySettings: (Int?, Int?) -> Unit,
+     modifier: Modifier = Modifier
+ ) {
+     val density = LocalDensity.current
+@@ -668,6 +669,17 @@ fun ReaderScreen(
+             )
+         }
+ 
++        // Modal Sheet: Display Settings (D17-D20)
++        if (uiState.activeSheet == ActiveReaderSheet.SETTINGS) {
++            DisplaySettingsSheet(
++                currentGeometryIndex = uiState.geometryIndex,
++                currentThemeIndex = uiState.themeIndex,
++                onSelectGeometryIndex = { onUpdateDisplaySettings(it, null) },
++                onSelectThemeIndex = { onUpdateDisplaySettings(null, it) },
++                onDismiss = onDismissSheet
++            )
++        }
++
+         // Modal Sheet: Table of Contents (D11)
+         if (uiState.activeSheet == ActiveReaderSheet.CONTENTS) {
+             ContentsTocScreen(
+diff --git a/app/src/main/java/app/opusreader/feature/reader/ReaderUiState.kt b/app/src/main/java/app/opusreader/feature/reader/ReaderUiState.kt
+index 17de415..16cc603 100644
+--- a/app/src/main/java/app/opusreader/feature/reader/ReaderUiState.kt
++++ b/app/src/main/java/app/opusreader/feature/reader/ReaderUiState.kt
+@@ -71,6 +71,8 @@ data class ReaderUiState(
+     val isThumbnailsVisible: Boolean = false,
+     val isBookmarked: Boolean = false,
+     val theme: PageTheme = PageTheme(textColor = 0xFFE0E0E0.toInt(), backgroundColor = 0xFF000000.toInt()),
++    val geometryIndex: Int = 1,
++    val themeIndex: Int = 3,
+     val activeSheet: ActiveReaderSheet? = null,
+     val tocEntries: List<TocEntry> = emptyList(),
+     val scrubberLocation: Int = 1,
+diff --git a/app/src/main/java/app/opusreader/feature/reader/ReaderViewModel.kt b/app/src/main/java/app/opusreader/feature/reader/ReaderViewModel.kt
+index 76ced4e..54e2608 100644
+--- a/app/src/main/java/app/opusreader/feature/reader/ReaderViewModel.kt
++++ b/app/src/main/java/app/opusreader/feature/reader/ReaderViewModel.kt
+@@ -12,6 +12,7 @@ import app.opusreader.engine.model.BookSource
+ import app.opusreader.engine.model.Locator
+ import app.opusreader.engine.model.LocatorRange
+ import app.opusreader.engine.model.Page
++import app.opusreader.engine.model.PageTheme
+ import app.opusreader.engine.model.Progress
+ import app.opusreader.engine.model.ReaderSettings
+ import app.opusreader.engine.model.TocEntry
+@@ -51,10 +52,23 @@ class ReaderViewModel(
+                     progressPercent = book.progressPercent
+                 )
+ 
++                val settings = settingsRepository.settingsFlow.firstOrNull() ?: app.opusreader.data.repository.ReaderSettings()
++                val targetTheme = when (settings.themeIndex) {
++                    0 -> PageTheme(textColor = 0xFF000000.toInt(), backgroundColor = 0xFFFFFFFF.toInt())
++                    1 -> PageTheme(textColor = 0xFF382E25.toInt(), backgroundColor = 0xFFF7F1E3.toInt())
++                    2 -> PageTheme(textColor = 0xFF28362D.toInt(), backgroundColor = 0xFFCEE5D8.toInt())
++                    else -> PageTheme(textColor = 0xFFE0E0E0.toInt(), backgroundColor = 0xFF000000.toInt())
++                }
+                 try {
+-                    engine.open(BookSource(book.id, book.filePath), ReaderSettings())
+-                } catch (_: Throwable) {
+-                    // Fall back to engine's current state if open fails or file is simulated
++                    val engineSettings = ReaderSettings(
++                        kindleGeometryIndex = settings.geometryIndex
++                    )
++                    engine.open(BookSource(book.id, book.filePath), engineSettings)
++                } catch (e: Throwable) {
++                    try {
++                        android.util.Log.e("ReaderViewModel", "engine.open failed for ${book.filePath}: ${e.message}", e)
++                    } catch (_: Throwable) {
++                    }
+                 }
+ 
+                 val initialLocator = Locator(book.spineIndex, book.charOffset)
+@@ -81,9 +95,14 @@ class ReaderViewModel(
+                         progress = initialProgress,
+                         tocEntries = toc,
+                         isBookmarked = isBookmarked,
++                        theme = targetTheme,
++                        geometryIndex = settings.geometryIndex,
++                        themeIndex = settings.themeIndex,
+                         scrubberLocation = current,
+                         totalLocations = total,
+-                        isLoading = false
++                        isLoading = false,
++                        activeSheet = null,
++                        isChromeVisible = false
+                     )
+                 }
+ 
+@@ -191,6 +210,71 @@ class ReaderViewModel(
+         _uiState.update { it.copy(activeSheet = null) }
+     }
+ 
++    fun updateDisplaySettings(geometryIndex: Int? = null, themeIndex: Int? = null) {
++        viewModelScope.launch {
++            val currentSettings = settingsRepository.settingsFlow.firstOrNull() ?: app.opusreader.data.repository.ReaderSettings()
++            val targetGeometry = geometryIndex ?: currentSettings.geometryIndex
++            val targetThemeIndex = themeIndex ?: currentSettings.themeIndex
++
++            if (geometryIndex != null && geometryIndex != currentSettings.geometryIndex) {
++                settingsRepository.updateGeometryIndex(geometryIndex)
++            }
++            if (themeIndex != null && themeIndex != currentSettings.themeIndex) {
++                settingsRepository.updateTheme(themeIndex)
++            }
++
++            val newTheme = when (targetThemeIndex) {
++                0 -> PageTheme(textColor = 0xFF000000.toInt(), backgroundColor = 0xFFFFFFFF.toInt())
++                1 -> PageTheme(textColor = 0xFF382E25.toInt(), backgroundColor = 0xFFF7F1E3.toInt())
++                2 -> PageTheme(textColor = 0xFF28362D.toInt(), backgroundColor = 0xFFCEE5D8.toInt())
++                else -> PageTheme(textColor = 0xFFE0E0E0.toInt(), backgroundColor = 0xFF000000.toInt())
++            }
++
++            val currentBook = _uiState.value.book
++            val currentLocator = _uiState.value.currentPage?.start ?: Locator(0, 0)
++
++            if (geometryIndex != null && geometryIndex != currentSettings.geometryIndex && currentBook != null) {
++                val t0 = System.currentTimeMillis()
++                try {
++                    val engineSettings = ReaderSettings(kindleGeometryIndex = targetGeometry)
++                    engine.open(BookSource(currentBook.id, currentBook.filePath), engineSettings)
++                    val newPage = engine.pageAt(currentLocator)
++                    val newProgress = engine.progress(newPage)
++                    val dt = System.currentTimeMillis() - t0
++                    try {
++                        android.util.Log.i("ReaderViewModel", "Reflowed book to geometry $targetGeometry in $dt ms, locator=$currentLocator preserved")
++                    } catch (_: Throwable) {
++                    }
++
++                    _uiState.update {
++                        it.copy(
++                            theme = newTheme,
++                            geometryIndex = targetGeometry,
++                            themeIndex = targetThemeIndex,
++                            currentPage = newPage,
++                            progress = newProgress,
++                            scrubberLocation = newProgress.current,
++                            totalLocations = newProgress.total
++                        )
++                    }
++                } catch (e: Throwable) {
++                    try {
++                        android.util.Log.e("ReaderViewModel", "Reflow failed: ${e.message}", e)
++                    } catch (_: Throwable) {
++                    }
++                }
++            } else {
++                _uiState.update {
++                    it.copy(
++                        theme = newTheme,
++                        geometryIndex = targetGeometry,
++                        themeIndex = targetThemeIndex
++                    )
++                }
++            }
++        }
++    }
++
+     fun onToggleThumbnails() {
+         _uiState.update { it.copy(isThumbnailsVisible = !it.isThumbnailsVisible) }
+     }
+diff --git a/app/src/main/java/app/opusreader/navigation/OpusNavHost.kt b/app/src/main/java/app/opusreader/navigation/OpusNavHost.kt
+index cee5a74..2c7a060 100644
+--- a/app/src/main/java/app/opusreader/navigation/OpusNavHost.kt
++++ b/app/src/main/java/app/opusreader/navigation/OpusNavHost.kt
+@@ -1,5 +1,8 @@
+ package app.opusreader.navigation
+ 
++import android.net.Uri
++import androidx.activity.compose.rememberLauncherForActivityResult
++import androidx.activity.result.contract.ActivityResultContracts
+ import androidx.compose.foundation.layout.Box
+ import androidx.compose.foundation.layout.fillMaxSize
+ import androidx.compose.foundation.layout.padding
+@@ -53,22 +56,31 @@ fun OpusNavHost(
+ ) {
+     LaunchedEffect(deepLinkUri) {
+         if (deepLinkUri != null) {
+-            val uri = android.net.Uri.parse(deepLinkUri)
+-            val segment = uri.lastPathSegment?.uppercase()
+-            if (segment in listOf("D10", "D11", "D12", "D13", "D14", "D15", "D16")) {
+-                navController.navigate("reader/fixture_malazan") {
++            if (deepLinkUri.startsWith("reader/")) {
++                navController.navigate(deepLinkUri) {
+                     popUpTo(navController.graph.findStartDestination().id) {
+                         saveState = true
+                     }
+                     launchSingleTop = true
+                 }
+             } else {
+-                navController.navigate(Screen.Library.route) {
+-                    popUpTo(navController.graph.findStartDestination().id) {
+-                        saveState = true
++                val uri = android.net.Uri.parse(deepLinkUri)
++                val segment = uri.lastPathSegment?.uppercase()
++                if (segment in listOf("D10", "D11", "D12", "D13", "D14", "D15", "D16")) {
++                    navController.navigate("reader/fixture_malazan") {
++                        popUpTo(navController.graph.findStartDestination().id) {
++                            saveState = true
++                        }
++                        launchSingleTop = true
++                    }
++                } else if (uri.host != "open" && segment != "OPEN") {
++                    navController.navigate(Screen.Library.route) {
++                        popUpTo(navController.graph.findStartDestination().id) {
++                            saveState = true
++                        }
++                        launchSingleTop = true
++                        restoreState = true
+                     }
+-                    launchSingleTop = true
+-                    restoreState = true
+                 }
+             }
+         }
+@@ -133,6 +145,15 @@ fun OpusNavHost(
+                 )
+             }
+             composable(Screen.Library.route) {
++                val context = LocalContext.current
++                val importLauncher = rememberLauncherForActivityResult(
++                    contract = ActivityResultContracts.OpenDocument()
++                ) { uri: Uri? ->
++                    if (uri != null) {
++                        libraryViewModel.importEpubUri(context, uri)
++                    }
++                }
++
+                 LibraryScreen(
+                     uiState = libraryUiState,
+                     onOpenBook = { bookId -> navController.navigate("reader/$bookId") },
+@@ -151,6 +172,12 @@ fun OpusNavHost(
+                     onCreateCollection = libraryViewModel::onCreateCollection,
+                     onGroupBySeriesChange = libraryViewModel::setGroupBySeries,
+                     onApplyFilterState = libraryViewModel::onApplyFilterState,
++                    onImportClick = {
++                        importLauncher.launch(
++                            arrayOf("application/epub+zip", "application/octet-stream", "*/*")
++                        )
++                    },
++                    onDismissError = libraryViewModel::onDismissError,
+                     modifier = Modifier.testTag("screen_library")
+                 )
+             }
+@@ -219,7 +246,8 @@ fun OpusNavHost(
+                     onNextSearchHit = readerViewModel::onNextSearchHit,
+                     onPreviousSearchHit = readerViewModel::onPreviousSearchHit,
+                     onSetAnnotationFilter = readerViewModel::onSetAnnotationFilter,
+-                    onSetAnnotationSort = readerViewModel::onSetAnnotationSort
++                    onSetAnnotationSort = readerViewModel::onSetAnnotationSort,
++                    onUpdateDisplaySettings = readerViewModel::updateDisplaySettings
+                 )
+             }
+         }
+diff --git a/app/src/release/java/app/opusreader/debug/DebugFixtureController.kt b/app/src/release/java/app/opusreader/debug/DebugFixtureController.kt
+index c5584c5..1d72162 100644
+--- a/app/src/release/java/app/opusreader/debug/DebugFixtureController.kt
++++ b/app/src/release/java/app/opusreader/debug/DebugFixtureController.kt
+@@ -3,7 +3,7 @@ package app.opusreader.debug
+ import android.content.Context
+ 
+ object DebugFixtureController {
+-    fun handleFixtureDeepLink(context: Context, fixtureUri: String) {
++    fun handleFixtureDeepLink(context: Context, fixtureUri: String, onBookReady: (String) -> Unit = {}) {
+         // No-op in release builds
+     }
+ 
+diff --git a/app/src/test/java/app/opusreader/feature/library/LibraryViewModelTest.kt b/app/src/test/java/app/opusreader/feature/library/LibraryViewModelTest.kt
+new file mode 100644
+index 0000000..23af6e3
+--- /dev/null
++++ b/app/src/test/java/app/opusreader/feature/library/LibraryViewModelTest.kt
+@@ -0,0 +1,179 @@
++package app.opusreader.feature.library
++
++import android.content.Context
++import app.opusreader.data.entity.AnnotationEntity
++import app.opusreader.data.entity.BookEntity
++import app.opusreader.data.entity.SpineItemEntity
++import app.opusreader.data.entity.TocEntryEntity
++import app.opusreader.data.importer.EpubImporter
++import app.opusreader.data.repository.LibraryRepository
++import app.opusreader.data.repository.ReaderSettings
++import app.opusreader.data.repository.SettingsRepository
++import kotlinx.coroutines.Dispatchers
++import kotlinx.coroutines.ExperimentalCoroutinesApi
++import kotlinx.coroutines.flow.Flow
++import kotlinx.coroutines.flow.MutableStateFlow
++import kotlinx.coroutines.flow.flowOf
++import kotlinx.coroutines.flow.update
++import kotlinx.coroutines.test.StandardTestDispatcher
++import kotlinx.coroutines.test.TestScope
++import kotlinx.coroutines.test.advanceUntilIdle
++import kotlinx.coroutines.test.resetMain
++import kotlinx.coroutines.test.runTest
++import kotlinx.coroutines.test.setMain
++import org.junit.After
++import org.junit.Assert.assertEquals
++import org.junit.Assert.assertFalse
++import org.junit.Assert.assertNotNull
++import org.junit.Assert.assertNull
++import org.junit.Assert.assertTrue
++import org.junit.Before
++import org.junit.Test
++import java.io.ByteArrayInputStream
++import java.io.IOException
++import java.io.InputStream
++
++@OptIn(ExperimentalCoroutinesApi::class)
++class LibraryViewModelTest {
++
++    private val testDispatcher = StandardTestDispatcher()
++    private val testScope = TestScope(testDispatcher)
++
++    private val fakeBooks = MutableStateFlow<List<BookEntity>>(emptyList())
++    private var importResultProvider: (InputStream, String?) -> Result<BookEntity> = { _, _ ->
++        Result.success(
++            BookEntity(
++                id = "imported_1",
++                title = "Imported Title",
++                author = "Author Test",
++                filePath = "/files/epubs/imported_1.epub",
++                progressPercent = 0f,
++                lastReadTimestamp = 1000L
++            )
++        )
++    }
++
++    private val fakeLibraryRepo = object : LibraryRepository {
++        override fun getBooks(): Flow<List<BookEntity>> = fakeBooks
++        override fun getDownloadedBooks(): Flow<List<BookEntity>> = fakeBooks
++        override fun getBooksByCollection(collectionName: String): Flow<List<BookEntity>> = fakeBooks
++        override fun getDistinctCollections(): Flow<List<String>> = flowOf(emptyList())
++
++        override suspend fun getBook(id: String): BookEntity? = fakeBooks.value.firstOrNull { it.id == id }
++        override suspend fun saveBook(book: BookEntity) {
++            fakeBooks.update { it.filterNot { b -> b.id == book.id } + book }
++        }
++        override suspend fun deleteBook(id: String) {
++            fakeBooks.update { it.filterNot { b -> b.id == id } }
++        }
++        override suspend fun updateProgress(id: String, spineIndex: Int, charOffset: Int, progressPercent: Float) {}
++        override suspend fun updateCollection(id: String, collectionName: String?) {}
++        override suspend fun getSpine(bookId: String): List<SpineItemEntity> = emptyList()
++        override suspend fun getToc(bookId: String): List<TocEntryEntity> = emptyList()
++        override fun getAnnotations(bookId: String): Flow<List<AnnotationEntity>> = flowOf(emptyList())
++        override suspend fun addAnnotation(annotation: AnnotationEntity) {}
++        override suspend fun deleteAnnotation(id: String) {}
++        override suspend fun toggleAnnotationFavorite(id: String, isFavorite: Boolean) {}
++        override fun createImporter(context: Context): EpubImporter = error("Use importBook")
++
++        override suspend fun importBook(
++            inputStream: InputStream,
++            originalName: String?,
++            context: Context?
++        ): Result<BookEntity> {
++            val res = importResultProvider(inputStream, originalName)
++            if (res.isSuccess) {
++                saveBook(res.getOrThrow())
++            }
++            return res
++        }
++    }
++
++    private val fakeSettingsRepo = object : SettingsRepository {
++        override val settingsFlow: Flow<ReaderSettings> = flowOf(ReaderSettings())
++        override suspend fun updateTheme(themeIndex: Int) {}
++        override suspend fun updateFontFamily(fontFamily: String) {}
++        override suspend fun updateFontSize(fontSize: Float) {}
++        override suspend fun updateLineSpacing(lineSpacing: Float) {}
++        override suspend fun updateContinuousScroll(enabled: Boolean) {}
++        override suspend fun updateBrightness(brightness: Float) {}
++        override suspend fun updateLibraryViewMode(mode: String) {}
++        override suspend fun updateLibrarySortMode(mode: String) {}
++        override suspend fun updateLibraryFilter(filter: String) {}
++        override suspend fun updateGroupBySeries(groupBySeries: Boolean) {}
++    }
++
++    private lateinit var viewModel: LibraryViewModel
++
++    @Before
++    fun setUp() {
++        Dispatchers.setMain(testDispatcher)
++        viewModel = LibraryViewModel(
++            libraryRepository = fakeLibraryRepo,
++            settingsRepository = fakeSettingsRepo
++        )
++    }
++
++    @After
++    fun tearDown() {
++        Dispatchers.resetMain()
++    }
++
++    @Test
++    fun importEpub_success_createsBookAndClearsError() = testScope.runTest {
++        val testStream = ByteArrayInputStream("dummy epub bytes".toByteArray())
++        var completionResult: Result<BookEntity>? = null
++
++        viewModel.importFromStream(null, testStream, "test_book.epub") { res ->
++            completionResult = res
++        }
++
++        testScheduler.advanceUntilIdle()
++
++        assertNotNull("Import callback must be invoked", completionResult)
++        assertTrue("Import must be success", completionResult!!.isSuccess)
++        assertFalse("isImporting must be false after completion", viewModel.uiState.value.isImporting)
++        assertNull("errorMessage must be null on success", viewModel.uiState.value.errorMessage)
++        assertEquals("Imported book must appear in allBooks", 1, viewModel.uiState.value.allBooks.size)
++        assertEquals("imported_1", viewModel.uiState.value.allBooks[0].id)
++    }
++
++    @Test
++    fun importEpub_corruptFile_setsErrorMessage() = testScope.runTest {
++        importResultProvider = { _, _ ->
++            Result.failure(IOException("Corrupted zip archive headers"))
++        }
++
++        val testStream = ByteArrayInputStream("garbage".toByteArray())
++        var completionResult: Result<BookEntity>? = null
++
++        viewModel.importFromStream(null, testStream, "corrupted.epub") { res ->
++            completionResult = res
++        }
++
++        testScheduler.advanceUntilIdle()
++
++        assertNotNull("Import callback must be invoked", completionResult)
++        assertTrue("Import must be failure", completionResult!!.isFailure)
++        assertFalse("isImporting must be false", viewModel.uiState.value.isImporting)
++        assertNotNull("errorMessage must be populated", viewModel.uiState.value.errorMessage)
++        assertTrue(
++            "errorMessage must describe error",
++            viewModel.uiState.value.errorMessage!!.contains("Corrupted zip archive headers")
++        )
++        assertEquals("No books should be added on error", 0, viewModel.uiState.value.allBooks.size)
++    }
++
++    @Test
++    fun onDismissError_clearsErrorMessage() = testScope.runTest {
++        importResultProvider = { _, _ -> Result.failure(Exception("Generic failure")) }
++        val testStream = ByteArrayInputStream("bad".toByteArray())
++        viewModel.importFromStream(null, testStream, "bad.epub")
++        testScheduler.advanceUntilIdle()
++
++        assertNotNull(viewModel.uiState.value.errorMessage)
++
++        viewModel.onDismissError()
++        assertNull("errorMessage must be null after onDismissError", viewModel.uiState.value.errorMessage)
++    }
++}
+diff --git a/app/src/test/java/app/opusreader/feature/reader/ReaderViewModelTest.kt b/app/src/test/java/app/opusreader/feature/reader/ReaderViewModelTest.kt
+index 73f9b7a..70ea5dd 100644
+--- a/app/src/test/java/app/opusreader/feature/reader/ReaderViewModelTest.kt
++++ b/app/src/test/java/app/opusreader/feature/reader/ReaderViewModelTest.kt
+@@ -99,18 +99,43 @@ class ReaderViewModelTest {
+         }
+     }
+ 
++    private val storedSettings = MutableStateFlow(app.opusreader.data.repository.ReaderSettings())
++
+     private val fakeSettingsRepo = object : SettingsRepository {
+-        override val settingsFlow: Flow<app.opusreader.data.repository.ReaderSettings> = flowOf(app.opusreader.data.repository.ReaderSettings())
+-        override suspend fun updateTheme(themeIndex: Int) {}
+-        override suspend fun updateFontFamily(fontFamily: String) {}
+-        override suspend fun updateFontSize(fontSize: Float) {}
+-        override suspend fun updateLineSpacing(lineSpacing: Float) {}
+-        override suspend fun updateContinuousScroll(enabled: Boolean) {}
+-        override suspend fun updateBrightness(brightness: Float) {}
+-        override suspend fun updateLibraryViewMode(mode: String) {}
+-        override suspend fun updateLibrarySortMode(mode: String) {}
+-        override suspend fun updateLibraryFilter(filter: String) {}
+-        override suspend fun updateGroupBySeries(groupBySeries: Boolean) {}
++        override val settingsFlow: Flow<app.opusreader.data.repository.ReaderSettings> = storedSettings
++        override suspend fun updateTheme(themeIndex: Int) {
++            storedSettings.update { it.copy(themeIndex = themeIndex) }
++        }
++        override suspend fun updateFontFamily(fontFamily: String) {
++            storedSettings.update { it.copy(fontFamily = fontFamily) }
++        }
++        override suspend fun updateFontSize(fontSize: Float) {
++            storedSettings.update { it.copy(fontSize = fontSize) }
++        }
++        override suspend fun updateLineSpacing(lineSpacing: Float) {
++            storedSettings.update { it.copy(lineSpacing = lineSpacing) }
++        }
++        override suspend fun updateContinuousScroll(enabled: Boolean) {
++            storedSettings.update { it.copy(continuousScroll = enabled) }
++        }
++        override suspend fun updateBrightness(brightness: Float) {
++            storedSettings.update { it.copy(brightness = brightness) }
++        }
++        override suspend fun updateLibraryViewMode(mode: String) {
++            storedSettings.update { it.copy(libraryViewMode = mode) }
++        }
++        override suspend fun updateLibrarySortMode(mode: String) {
++            storedSettings.update { it.copy(librarySortMode = mode) }
++        }
++        override suspend fun updateLibraryFilter(filter: String) {
++            storedSettings.update { it.copy(libraryFilter = filter) }
++        }
++        override suspend fun updateGroupBySeries(groupBySeries: Boolean) {
++            storedSettings.update { it.copy(groupBySeries = groupBySeries) }
++        }
++        override suspend fun updateGeometryIndex(geometryIndex: Int) {
++            storedSettings.update { it.copy(geometryIndex = geometryIndex) }
++        }
+     }
+ 
+     private val samplePages = listOf(
+@@ -305,4 +330,51 @@ class ReaderViewModelTest {
+         assertNull(viewModel.uiState.value.activeSheet)
+         assertEquals(samplePages[2], viewModel.uiState.value.currentPage)
+     }
++
++    @Test
++    fun updateDisplaySettings_reflowsAndPreservesLocator() = testScope.runTest {
++        val viewModel = ReaderViewModel(fakeLibraryRepo, fakeSettingsRepo, fakeEngine)
++        viewModel.loadBook("book_1")
++        advanceUntilIdle()
++
++        // Start on page with word in 51..100 (samplePages[1])
++        val page1 = samplePages[1]
++        viewModel.onNextPage()
++        assertEquals(page1, viewModel.uiState.value.currentPage)
++        val initialLoc = page1.start
++
++        // Change geometry from 1 to 3 (Large)
++        viewModel.updateDisplaySettings(geometryIndex = 3)
++        advanceUntilIdle()
++
++        // Assert geometry changed and persisted
++        assertEquals(3, viewModel.uiState.value.geometryIndex)
++        assertEquals(3, storedSettings.value.geometryIndex)
++
++        // Assert locator preserved after reflow
++        val newPage = viewModel.uiState.value.currentPage
++        assertNotNull("Current page must not be null after reflow", newPage)
++        assertTrue(
++            "Page must contain initial locator",
++            newPage!!.start.spineIndex == initialLoc.spineIndex &&
++                newPage.start.charOffset <= initialLoc.charOffset &&
++                newPage.end.charOffset >= initialLoc.charOffset
++        )
++    }
++
++    @Test
++    fun updateDisplaySettings_changesThemeAndPersists() = testScope.runTest {
++        val viewModel = ReaderViewModel(fakeLibraryRepo, fakeSettingsRepo, fakeEngine)
++        viewModel.loadBook("book_1")
++        advanceUntilIdle()
++
++        // Change theme to Sepia (themeIndex = 1)
++        viewModel.updateDisplaySettings(themeIndex = 1)
++        advanceUntilIdle()
++
++        assertEquals(1, viewModel.uiState.value.themeIndex)
++        assertEquals(1, storedSettings.value.themeIndex)
++        assertEquals(0xFFF7F1E3.toInt(), viewModel.uiState.value.theme.backgroundColor)
++        assertEquals(0xFF382E25.toInt(), viewModel.uiState.value.theme.textColor)
++    }
+ }
+diff --git a/data/src/main/java/app/opusreader/data/repository/LibraryRepository.kt b/data/src/main/java/app/opusreader/data/repository/LibraryRepository.kt
+index 5b0751b..5675f37 100644
+--- a/data/src/main/java/app/opusreader/data/repository/LibraryRepository.kt
++++ b/data/src/main/java/app/opusreader/data/repository/LibraryRepository.kt
+@@ -35,6 +35,15 @@ interface LibraryRepository {
+ 
+     fun createImporter(context: Context): EpubImporter
+ 
++    suspend fun importBook(
++        inputStream: java.io.InputStream,
++        originalName: String?,
++        context: Context?
++    ): Result<BookEntity> {
++        if (context == null) return Result.failure(IllegalArgumentException("Context is required"))
++        return createImporter(context).importFromStream(inputStream, originalName)
++    }
++
+     companion object {
+         fun create(context: Context): LibraryRepository {
+             val db = OpusDatabase.getInstance(context)
+diff --git a/data/src/main/java/app/opusreader/data/repository/SettingsRepository.kt b/data/src/main/java/app/opusreader/data/repository/SettingsRepository.kt
+index df67c10..83e9a86 100644
+--- a/data/src/main/java/app/opusreader/data/repository/SettingsRepository.kt
++++ b/data/src/main/java/app/opusreader/data/repository/SettingsRepository.kt
+@@ -25,7 +25,8 @@ data class ReaderSettings(
+     val libraryViewMode: String = "GRID",
+     val librarySortMode: String = "RECENT",
+     val libraryFilter: String = "ALL",
+-    val groupBySeries: Boolean = false
++    val groupBySeries: Boolean = false,
++    val geometryIndex: Int = 1
+ )
+ 
+ interface SettingsRepository {
+@@ -40,6 +41,7 @@ interface SettingsRepository {
+     suspend fun updateLibrarySortMode(mode: String)
+     suspend fun updateLibraryFilter(filter: String)
+     suspend fun updateGroupBySeries(groupBySeries: Boolean)
++    suspend fun updateGeometryIndex(geometryIndex: Int) {}
+ 
+     companion object {
+         fun create(context: Context): SettingsRepository {
+@@ -64,6 +66,7 @@ class DefaultSettingsRepository(
+         val LIBRARY_SORT_MODE = stringPreferencesKey("library_sort_mode")
+         val LIBRARY_FILTER = stringPreferencesKey("library_filter")
+         val GROUP_BY_SERIES = booleanPreferencesKey("group_by_series")
++        val GEOMETRY_INDEX = intPreferencesKey("geometry_index")
+     }
+ 
+     override val settingsFlow: Flow<ReaderSettings> = context.dataStore.data.map { prefs ->
+@@ -78,7 +81,8 @@ class DefaultSettingsRepository(
+             libraryViewMode = prefs[Keys.LIBRARY_VIEW_MODE] ?: "GRID",
+             librarySortMode = prefs[Keys.LIBRARY_SORT_MODE] ?: "RECENT",
+             libraryFilter = prefs[Keys.LIBRARY_FILTER] ?: "ALL",
+-            groupBySeries = prefs[Keys.GROUP_BY_SERIES] ?: false
++            groupBySeries = prefs[Keys.GROUP_BY_SERIES] ?: false,
++            geometryIndex = prefs[Keys.GEOMETRY_INDEX] ?: 1
+         )
+     }
+ 
+@@ -121,4 +125,8 @@ class DefaultSettingsRepository(
+     override suspend fun updateGroupBySeries(groupBySeries: Boolean) {
+         context.dataStore.edit { it[Keys.GROUP_BY_SERIES] = groupBySeries }
+     }
++
++    override suspend fun updateGeometryIndex(geometryIndex: Int) {
++        context.dataStore.edit { it[Keys.GEOMETRY_INDEX] = geometryIndex }
++    }
+ }
+diff --git a/data/src/test/java/app/opusreader/data/EpubParserTest.kt b/data/src/test/java/app/opusreader/data/EpubParserTest.kt
+new file mode 100644
+index 0000000..0867593
+--- /dev/null
++++ b/data/src/test/java/app/opusreader/data/EpubParserTest.kt
+@@ -0,0 +1,31 @@
++package app.opusreader.data
++
++import app.opusreader.data.importer.EpubParser
++import org.junit.Assert.assertEquals
++import org.junit.Assert.assertNotNull
++import org.junit.Assert.assertTrue
++import org.junit.Test
++import java.io.File
++import java.io.FileInputStream
++
++class EpubParserTest {
++
++    @Test
++    fun parseKindleExamV3_succeedsAndExtractsSpinesAndToc() {
++        val epubFile = File("../../render.engine/corpora/kindle_exam_v3.epub")
++        if (!epubFile.exists()) {
++            println("Skip: epub not found at ${epubFile.absolutePath}")
++            return
++        }
++
++        val parsed = FileInputStream(epubFile).use { stream ->
++            EpubParser.parse(stream, epubFile.absolutePath)
++        }
++
++        assertNotNull(parsed.book)
++        println("Parsed book title: ${parsed.book.title}, author: ${parsed.book.author}")
++        assertTrue("Spine items should not be empty", parsed.spineItems.isNotEmpty())
++        println("Spine count: ${parsed.spineItems.size}")
++        println("TOC count: ${parsed.tocEntries.size}")
++    }
++}
+diff --git a/design/src/main/java/app/opusreader/design/theme/OpusDimensions.kt b/design/src/main/java/app/opusreader/design/theme/OpusDimensions.kt
+index 4824ddd..9f8e9d4 100644
+--- a/design/src/main/java/app/opusreader/design/theme/OpusDimensions.kt
++++ b/design/src/main/java/app/opusreader/design/theme/OpusDimensions.kt
+@@ -149,4 +149,10 @@ object OpusDimensions {
+     val AnnotationsColorBarWidth: Dp = 6.refPx
+     val AnnotationsColorBarHeight: Dp = 48.refPx
+     val AnnotationsNotePaddingStart: Dp = 22.refPx
++
++    // Display Settings (D17 - D20)
++    val DisplaySettingsSheetHeight: Dp = 950.refPx // ~362 dp
++    val DisplaySettingsPresetHeight: Dp = 147.refPx // ~56 dp
++    val DisplaySettingsSwatchSize: Dp = 126.refPx // ~48 dp
++    val BorderThicknessSelected: Dp = 3.dp
+ }
+diff --git a/engine/src/androidTest/java/app/opusreader/engine/NativeReaderEngineParityTest.kt b/engine/src/androidTest/java/app/opusreader/engine/NativeReaderEngineParityTest.kt
+index e2cca2d..ab93fbe 100644
+--- a/engine/src/androidTest/java/app/opusreader/engine/NativeReaderEngineParityTest.kt
++++ b/engine/src/androidTest/java/app/opusreader/engine/NativeReaderEngineParityTest.kt
+@@ -197,6 +197,101 @@ class NativeReaderEngineParityTest {
+         }
+     }
+ 
++    @Test
++    fun dumpExam3ParityPages() = runBlocking {
++        assumeTrue(
++            "Native library libkindle_render_jni.so is not bundled or selfTest failed; skipping dump",
++            JniNativeBridge.isAvailable() && JniNativeBridge.selfTest()
++        )
++
++        val targetContext = InstrumentationRegistry.getInstrumentation().targetContext
++        val testContext = InstrumentationRegistry.getInstrumentation().context
++        val assets = object : EngineAssets {
++            override fun fontBytes(name: String): ByteArray? {
++                for (ctx in listOf(testContext, targetContext)) {
++                    for (candidate in listOf("fonts/$name", name)) {
++                        try {
++                            ctx.assets.open(candidate).use { return it.readBytes() }
++                        } catch (_: Throwable) {
++                        }
++                    }
++                }
++                return null
++            }
++
++            override fun hyphenationBytes(lang: String): ByteArray? {
++                for (ctx in listOf(testContext, targetContext)) {
++                    for (candidate in listOf("hyphen/hyph_${lang}.bin", "hyphen/hyph_${lang}.dic", "hyph_${lang}.bin", "hyph_${lang}.dic")) {
++                        try {
++                            ctx.assets.open(candidate).use { return it.readBytes() }
++                        } catch (_: Throwable) {
++                        }
++                    }
++                }
++                return null
++            }
++        }
++
++        val epubFile = File(targetContext.cacheDir, "exam3_dump.epub").apply {
++            File("/data/local/tmp/kindle_exam_v3.epub").inputStream().use { input ->
++                outputStream().use { output -> input.copyTo(output) }
++            }
++        }
++
++        val outDir = File(targetContext.cacheDir, "parity_dump")
++        outDir.mkdirs()
++
++        val theme = PageTheme(textColor = Color.BLACK, backgroundColor = Color.WHITE)
++
++        // 1. exam3_normal (geometry index 3: 45px / 68 pitch)
++        val engineNormal = NativeReaderEngine(bridge = JniNativeBridge, assets = assets)
++        try {
++            engineNormal.open(
++                BookSource(id = "exam3_normal", filePath = epubFile.absolutePath),
++                ReaderSettings(kindleGeometryIndex = 3)
++            )
++            val normalIndices = listOf(0, 1, 2, 10, 20, 30, 40, 50, engineNormal.totalPages - 1)
++            for (pIdx in normalIndices) {
++                val page = engineNormal.pageByIndex(pIdx) ?: continue
++                val bmp = Bitmap.createBitmap(1080, 2340, Bitmap.Config.ARGB_8888)
++                val canvas = Canvas(bmp)
++                engineNormal.draw(page, canvas, theme)
++                val outFile = File(outDir, "engine_normal_page_%03d.png".format(pIdx))
++                outFile.outputStream().use { out ->
++                    bmp.compress(Bitmap.CompressFormat.PNG, 100, out)
++                }
++                bmp.recycle()
++                android.util.Log.i("PARITY_DUMP", "Saved normal page $pIdx to ${outFile.absolutePath}")
++            }
++        } finally {
++            engineNormal.close()
++        }
++
++        // 2. exam3_small (geometry index 0: 34px / 51 pitch)
++        val engineSmall = NativeReaderEngine(bridge = JniNativeBridge, assets = assets)
++        try {
++            engineSmall.open(
++                BookSource(id = "exam3_small", filePath = epubFile.absolutePath),
++                ReaderSettings(kindleGeometryIndex = 0)
++            )
++            val smallIndices = listOf(0, 1, 2, 10, 20, 30, 40, 50, engineSmall.totalPages - 1)
++            for (pIdx in smallIndices) {
++                val page = engineSmall.pageByIndex(pIdx) ?: continue
++                val bmp = Bitmap.createBitmap(1080, 2340, Bitmap.Config.ARGB_8888)
++                val canvas = Canvas(bmp)
++                engineSmall.draw(page, canvas, theme)
++                val outFile = File(outDir, "engine_small_page_%03d.png".format(pIdx))
++                outFile.outputStream().use { out ->
++                    bmp.compress(Bitmap.CompressFormat.PNG, 100, out)
++                }
++                bmp.recycle()
++                android.util.Log.i("PARITY_DUMP", "Saved small page $pIdx to ${outFile.absolutePath}")
++            }
++        } finally {
++            engineSmall.close()
++        }
++    }
++
+     private fun sha256Hex(bytes: ByteArray): String {
+         val digest = MessageDigest.getInstance("SHA-256").digest(bytes)
+         return digest.joinToString("") { "%02x".format(it) }
+diff --git a/engine/src/main/java/app/opusreader/engine/JniNativeBridge.kt b/engine/src/main/java/app/opusreader/engine/JniNativeBridge.kt
+index da426e3..598c61a 100644
+--- a/engine/src/main/java/app/opusreader/engine/JniNativeBridge.kt
++++ b/engine/src/main/java/app/opusreader/engine/JniNativeBridge.kt
+@@ -190,6 +190,14 @@ object JniNativeBridge : NativeBridge {
+         }
+     }
+ 
++    override fun trimMemory() {
++        if (!loaded) return
++        try {
++            nativeTrimMemory()
++        } catch (_: Throwable) {
++        }
++    }
++
+     private fun ensureLoaded() {
+         if (!loaded) {
+             throw EngineException("Native library $LIB_NAME is not loaded (${loadError ?: "unknown"})")
+@@ -256,4 +264,7 @@ object JniNativeBridge : NativeBridge {
+ 
+     @JvmStatic
+     private external fun nativeClose(handle: Long)
++
++    @JvmStatic
++    private external fun nativeTrimMemory()
+ }
+diff --git a/engine/src/main/java/app/opusreader/engine/NativeBridge.kt b/engine/src/main/java/app/opusreader/engine/NativeBridge.kt
+index 64dc6ab..4c2d488 100644
+--- a/engine/src/main/java/app/opusreader/engine/NativeBridge.kt
++++ b/engine/src/main/java/app/opusreader/engine/NativeBridge.kt
+@@ -28,4 +28,5 @@ interface NativeBridge {
+     ): Boolean
+     fun search(handle: Long, query: String): String
+     fun close(handle: Long)
++    fun trimMemory() {}
+ }
+diff --git a/engine/src/main/java/app/opusreader/engine/NativeReaderEngine.kt b/engine/src/main/java/app/opusreader/engine/NativeReaderEngine.kt
+index 7522006..eb8d9fe 100644
+--- a/engine/src/main/java/app/opusreader/engine/NativeReaderEngine.kt
++++ b/engine/src/main/java/app/opusreader/engine/NativeReaderEngine.kt
+@@ -21,20 +21,22 @@ import app.opusreader.engine.model.WordBox
+ import kotlinx.coroutines.CoroutineDispatcher
+ import kotlinx.coroutines.CoroutineScope
+ import kotlinx.coroutines.Dispatchers
++import kotlinx.coroutines.Job
+ import kotlinx.coroutines.SupervisorJob
++import kotlinx.coroutines.asCoroutineDispatcher
++import kotlinx.coroutines.isActive
+ import kotlinx.coroutines.launch
+ import kotlinx.coroutines.withContext
+ import java.io.Closeable
+ import java.io.File
+ import java.nio.ByteBuffer
+-import java.util.LinkedHashMap
+ 
+ class NativeReaderEngine(
+     private val bridge: NativeBridge = JniNativeBridge,
+     private val assets: EngineAssets = EmptyEngineAssets,
+     private val allowMissingFileFallback: Boolean = true,
+     private val backgroundDispatcher: CoroutineDispatcher = Dispatchers.Default,
+-    private val bitmapCacheCapacity: Int = 4
++    private val bitmapCacheCapacity: Int = 5
+ ) : ReaderEngine, Closeable {
+ 
+     private data class BookSession(
+@@ -50,26 +52,41 @@ class NativeReaderEngine(
+         val toc: List<TocEntry>
+     )
+ 
+-    private data class BitmapCacheKey(
+-        val sessionId: Long,
+-        val pageIndex: Int,
+-        val textColor: Int,
+-        val backgroundColor: Int
+-    )
+-
+     private val lock = Any()
+-    private val prefetchScope = CoroutineScope(SupervisorJob() + backgroundDispatcher)
++    private val prefetchExecutor = java.util.concurrent.Executors.newSingleThreadExecutor { r ->
++        Thread(r, "kr-prefetch").apply {
++            isDaemon = true
++            priority = Thread.MIN_PRIORITY
++        }
++    }
++    private val prefetchDispatcher = prefetchExecutor.asCoroutineDispatcher()
++    private val prefetchScope = CoroutineScope(SupervisorJob() + prefetchDispatcher)
++    private var prefetchJob: Job? = null
++
++    private val renderBufferLock = Any()
++    private val renderBuffer: ByteBuffer by lazy {
++        ByteBuffer.allocateDirect(KindleGeometry.SCREEN_W * KindleGeometry.SCREEN_H * 4)
++    }
+ 
+     @Volatile
+     private var currentSession: BookSession? = null
+ 
+     private var sessionCounter: Long = 0L
+ 
+-    private val bitmapCache = object : LinkedHashMap<BitmapCacheKey, Bitmap>(8, 0.75f, true) {
+-        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<BitmapCacheKey, Bitmap>?): Boolean {
+-            return size > bitmapCacheCapacity
++    val bitmapCache = PageBitmapLruCache(
++        maxCount = bitmapCacheCapacity,
++        maxBytes = 60L * 1024L * 1024L,
++        maxPoolSize = 3,
++        onRecycle = { bmp ->
++            try {
++                if (!bmp.isRecycled) {
++                    bmp.recycle()
++                }
++                bridge.trimMemory()
++            } catch (_: Throwable) {
++            }
+         }
+-    }
++    )
+ 
+     val totalPages: Int
+         get() = currentSession?.pages?.size ?: 0
+@@ -154,6 +171,7 @@ class NativeReaderEngine(
+                 val newSession: BookSession
+                 val oldHandle: Long
+                 synchronized(lock) {
++                    prefetchJob?.cancel()
+                     sessionCounter += 1L
+                     oldHandle = currentSession?.handle ?: 0L
+                     bitmapCache.clear()
+@@ -204,6 +222,8 @@ class NativeReaderEngine(
+         return PageModelOps.findPageAt(session.pages, loc)
+     }
+ 
++    fun pageByIndex(index: Int): Page? = currentSession?.pages?.getOrNull(index)
++
+     override fun next(page: Page): Page? {
+         val session = currentSession ?: return null
+         val index = session.pageIndexByRange[page.start to page.end]
+@@ -266,26 +286,24 @@ class NativeReaderEngine(
+             backgroundColor = theme.backgroundColor
+         )
+ 
+-        val cachedBitmap = synchronized(lock) { bitmapCache[key] }
++        val cachedBitmap = bitmapCache.get(key)
++        val isCacheHit = cachedBitmap != null
+         val bitmap = if (cachedBitmap != null) {
+-            cachedBitmap
+-        } else {
+-            val t0 = System.nanoTime()
+-            val rendered = renderPageToBitmap(session, pageIndex, theme)
+-            val elapsedMs = (System.nanoTime() - t0) / 1_000_000.0
+             try {
+-                Log.d(TAG, String.format("Rendered page %d on cache miss in %.2f ms", pageIndex, elapsedMs))
++                Log.d(TAG, String.format("[RENDER_TIMING] page=%d miss=false cached=true", pageIndex))
+             } catch (_: Throwable) {
+             }
++            cachedBitmap
++        } else {
++            val rendered = renderPageToBitmap(session, pageIndex, theme)
+             if (rendered != null) {
+-                synchronized(lock) {
+-                    bitmapCache[key] = rendered
+-                }
++                bitmapCache.put(key, rendered)
+             }
+             rendered
+         }
+ 
+         if (bitmap != null) {
++            val tDraw0 = System.nanoTime()
+             val src = Rect(0, 0, KindleGeometry.SCREEN_W, KindleGeometry.SCREEN_H)
+             val cWidth = canvas.width
+             val dst = if (cWidth > 0 && cWidth != KindleGeometry.SCREEN_W && canvas.matrix.isIdentity) {
+@@ -295,6 +313,11 @@ class NativeReaderEngine(
+                 RectF(0f, 0f, KindleGeometry.SCREEN_W.toFloat(), KindleGeometry.SCREEN_H.toFloat())
+             }
+             canvas.drawBitmap(bitmap, src, dst, null)
++            val drawMs = (System.nanoTime() - tDraw0) / 1_000_000.0
++            try {
++                Log.d(TAG, String.format("[RENDER_TIMING] page=%d draw=%.2fms", pageIndex, drawMs))
++            } catch (_: Throwable) {
++            }
+         } else {
+             canvas.drawColor(theme.backgroundColor)
+             val paint = try {
+@@ -331,6 +354,7 @@ class NativeReaderEngine(
+     override fun close() {
+         val oldHandle: Long
+         synchronized(lock) {
++            prefetchJob?.cancel()
+             oldHandle = currentSession?.handle ?: 0L
+             currentSession = null
+             bitmapCache.clear()
+@@ -338,6 +362,7 @@ class NativeReaderEngine(
+         if (oldHandle > 0L) {
+             bridge.close(oldHandle)
+         }
++        bridge.trimMemory()
+     }
+ 
+     private fun renderPageToBitmap(
+@@ -347,23 +372,56 @@ class NativeReaderEngine(
+     ): Bitmap? {
+         if (session.handle <= 0L) return null
+         return try {
+-            val byteCount = KindleGeometry.SCREEN_W * KindleGeometry.SCREEN_H * 4
+-            val directBuf = ByteBuffer.allocateDirect(byteCount)
+-            val ok = bridge.renderPage(
+-                handle = session.handle,
+-                pageIndex = pageIndex,
+-                fgArgb = theme.textColor,
+-                bgArgb = theme.backgroundColor,
+-                rgbaBuffer = directBuf
+-            )
+-            if (!ok) return null
+-            directBuf.rewind()
+-            val bmp = Bitmap.createBitmap(
+-                KindleGeometry.SCREEN_W,
+-                KindleGeometry.SCREEN_H,
+-                Bitmap.Config.ARGB_8888
+-            )
+-            bmp.copyPixelsFromBuffer(directBuf)
++            val tTotal0 = System.nanoTime()
++            val ok: Boolean
++            val rustMs: Double
++            var bmp: Bitmap? = null
++            var wasReused = false
++            val copyMs: Double
++
++            synchronized(renderBufferLock) {
++                renderBuffer.rewind()
++                val tRust0 = System.nanoTime()
++                ok = bridge.renderPage(
++                    handle = session.handle,
++                    pageIndex = pageIndex,
++                    fgArgb = theme.textColor,
++                    bgArgb = theme.backgroundColor,
++                    rgbaBuffer = renderBuffer
++                )
++                rustMs = (System.nanoTime() - tRust0) / 1_000_000.0
++                if (!ok) return null
++
++                renderBuffer.rewind()
++                val reused = bitmapCache.obtainReusableBitmap()
++                if (reused != null &&
++                    reused.width == KindleGeometry.SCREEN_W &&
++                    reused.height == KindleGeometry.SCREEN_H &&
++                    !reused.isRecycled
++                ) {
++                    bmp = reused
++                    wasReused = true
++                } else {
++                    bmp = Bitmap.createBitmap(
++                        KindleGeometry.SCREEN_W,
++                        KindleGeometry.SCREEN_H,
++                        Bitmap.Config.ARGB_8888
++                    )
++                }
++
++                val tCopy0 = System.nanoTime()
++                bmp.copyPixelsFromBuffer(renderBuffer)
++                copyMs = (System.nanoTime() - tCopy0) / 1_000_000.0
++            }
++
++            val elapsedMs = (System.nanoTime() - tTotal0) / 1_000_000.0
++            try {
++                Log.d(TAG, String.format(
++                    "[RENDER_TIMING] page=%d miss=true total=%.2fms rust=%.2fms copy=%.2fms reusedBmp=%b",
++                    pageIndex, elapsedMs, rustMs, copyMs, wasReused
++                ))
++            } catch (_: Throwable) {
++            }
+             bmp
+         } catch (_: Throwable) {
+             null
+@@ -376,31 +434,37 @@ class NativeReaderEngine(
+         theme: PageTheme
+     ) {
+         if (session.handle <= 0L) return
+-        val neighbors = listOf(currentIndex + 1, currentIndex - 1).filter {
+-            it in session.pages.indices
+-        }
+-        for (neighborIdx in neighbors) {
+-            val nKey = BitmapCacheKey(
+-                sessionId = session.sessionId,
+-                pageIndex = neighborIdx,
+-                textColor = theme.textColor,
+-                backgroundColor = theme.backgroundColor
+-            )
+-            val alreadyCached = synchronized(lock) { bitmapCache.containsKey(nKey) }
+-            if (!alreadyCached) {
+-                prefetchScope.launch {
+-                    val cur = currentSession
+-                    if (cur != null && cur.sessionId == session.sessionId) {
+-                        val bmp = renderPageToBitmap(session, neighborIdx, theme)
+-                        if (bmp != null) {
+-                            synchronized(lock) {
+-                                if (currentSession?.sessionId == session.sessionId) {
+-                                    bitmapCache.putIfAbsent(nKey, bmp)
+-                                }
+-                            }
++        val forward1 = currentIndex + 1
++        val forward2 = currentIndex + 2
++        val backward1 = currentIndex - 1
++        val targets = listOf(forward1, forward2, backward1).filter { it in session.pages.indices }
++
++        synchronized(lock) {
++            prefetchJob?.cancel()
++            prefetchJob = prefetchScope.launch {
++                for (targetIdx in targets) {
++                    if (!isActive) break
++                    val cur = currentSession ?: break
++                    if (cur.sessionId != session.sessionId) break
++
++                    val nKey = BitmapCacheKey(
++                        sessionId = session.sessionId,
++                        pageIndex = targetIdx,
++                        textColor = theme.textColor,
++                        backgroundColor = theme.backgroundColor
++                    )
++                    if (bitmapCache.containsKey(nKey)) continue
++
++                    val bmp = renderPageToBitmap(session, targetIdx, theme)
++                    if (bmp != null) {
++                        if (!isActive || currentSession?.sessionId != session.sessionId) {
++                            bitmapCache.put(nKey, bmp)
++                            break
+                         }
++                        bitmapCache.put(nKey, bmp)
+                     }
+                 }
++                bridge.trimMemory()
+             }
+         }
+     }
+diff --git a/engine/src/main/java/app/opusreader/engine/PageBitmapLruCache.kt b/engine/src/main/java/app/opusreader/engine/PageBitmapLruCache.kt
+new file mode 100644
+index 0000000..f538b4b
+--- /dev/null
++++ b/engine/src/main/java/app/opusreader/engine/PageBitmapLruCache.kt
+@@ -0,0 +1,145 @@
++package app.opusreader.engine
++
++import android.graphics.Bitmap
++import androidx.annotation.GuardedBy
++import java.util.ArrayDeque
++import java.util.LinkedHashMap
++
++data class BitmapCacheKey(
++    val sessionId: Long,
++    val pageIndex: Int,
++    val textColor: Int,
++    val backgroundColor: Int
++)
++
++/**
++ * Thread-safe LRU cache bounded by count and byte size.
++ *
++ * Supports an internal reusable pool for recycling evicted objects
++ * without triggering allocation churn.
++ */
++open class BoundedLruCache<K, V : Any>(
++    val maxCount: Int,
++    val maxBytes: Long,
++    val maxPoolSize: Int = 2,
++    private val sizeOf: (V) -> Long = { 1L },
++    private val onRecycle: (V) -> Unit = {}
++) {
++    private val lock = Any()
++
++    @GuardedBy("lock")
++    private var currentBytes: Long = 0L
++
++    @GuardedBy("lock")
++    private val map = object : LinkedHashMap<K, V>(maxCount + 1, 0.75f, true) {
++        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<K, V>?): Boolean {
++            return false // Handled explicitly in trimToSize()
++        }
++    }
++
++    @GuardedBy("lock")
++    private val reusablePool = ArrayDeque<V>(maxPoolSize)
++
++    val size: Int
++        get() = synchronized(lock) { map.size }
++
++    val byteCount: Long
++        get() = synchronized(lock) { currentBytes }
++
++    val poolSize: Int
++        get() = synchronized(lock) { reusablePool.size }
++
++    fun get(key: K): V? = synchronized(lock) {
++        map[key]
++    }
++
++    fun containsKey(key: K): Boolean = synchronized(lock) {
++        map.containsKey(key)
++    }
++
++    fun put(key: K, value: V) {
++        synchronized(lock) {
++            val old = map.put(key, value)
++            if (old != null) {
++                currentBytes -= sizeOf(old)
++                if (old !== value) {
++                    offerReusable(old)
++                }
++            }
++            currentBytes += sizeOf(value)
++            trimToSize()
++        }
++    }
++
++    fun obtainReusable(): V? = synchronized(lock) {
++        if (reusablePool.isNotEmpty()) {
++            reusablePool.removeLast()
++        } else {
++            null
++        }
++    }
++
++    private fun offerReusable(value: V) {
++        if (reusablePool.size < maxPoolSize) {
++            reusablePool.add(value)
++        } else {
++            onRecycle(value)
++        }
++    }
++
++    private fun trimToSize() {
++        while (map.size > maxCount || (currentBytes > maxBytes && map.size > 1)) {
++            val iterator = map.entries.iterator()
++            if (!iterator.hasNext()) break
++            val entry = iterator.next()
++            iterator.remove()
++            val evicted = entry.value
++            currentBytes -= sizeOf(evicted)
++            offerReusable(evicted)
++        }
++    }
++
++    fun clear() {
++        synchronized(lock) {
++            for (value in map.values) {
++                onRecycle(value)
++            }
++            map.clear()
++            currentBytes = 0L
++            while (reusablePool.isNotEmpty()) {
++                onRecycle(reusablePool.removeLast())
++            }
++        }
++    }
++}
++
++/**
++ * PageBitmapLruCache specializing [BoundedLruCache] for Android [Bitmap]s.
++ */
++class PageBitmapLruCache(
++    maxCount: Int = 5,
++    maxBytes: Long = 60L * 1024L * 1024L,
++    maxPoolSize: Int = 3,
++    onRecycle: (Bitmap) -> Unit = { bmp ->
++        try {
++            if (!bmp.isRecycled) {
++                bmp.recycle()
++            }
++        } catch (_: Throwable) {
++        }
++    }
++) : BoundedLruCache<BitmapCacheKey, Bitmap>(
++    maxCount = maxCount,
++    maxBytes = maxBytes,
++    maxPoolSize = maxPoolSize,
++    sizeOf = { bmp ->
++        try {
++            bmp.byteCount.toLong().takeIf { it > 0 } ?: (KindleGeometry.SCREEN_W * KindleGeometry.SCREEN_H * 4L)
++        } catch (_: Throwable) {
++            KindleGeometry.SCREEN_W * KindleGeometry.SCREEN_H * 4L
++        }
++    },
++    onRecycle = onRecycle
++) {
++    fun obtainReusableBitmap(): Bitmap? = obtainReusable()
++}
+diff --git a/engine/src/test/java/app/opusreader/engine/PageBitmapLruCacheTest.kt b/engine/src/test/java/app/opusreader/engine/PageBitmapLruCacheTest.kt
+new file mode 100644
+index 0000000..7f74ae0
+--- /dev/null
++++ b/engine/src/test/java/app/opusreader/engine/PageBitmapLruCacheTest.kt
+@@ -0,0 +1,175 @@
++package app.opusreader.engine
++
++import org.junit.Assert.assertEquals
++import org.junit.Assert.assertFalse
++import org.junit.Assert.assertNotNull
++import org.junit.Assert.assertNull
++import org.junit.Assert.assertTrue
++import org.junit.Test
++
++class PageBitmapLruCacheTest {
++
++    private data class FakeBuffer(val id: Int, val bytes: Long = 100L) {
++        var isRecycled: Boolean = false
++    }
++
++    @Test
++    fun boundRespected_maxCount_doesNotExceedLimit() {
++        val recycled = mutableListOf<FakeBuffer>()
++        val cache = BoundedLruCache<Int, FakeBuffer>(
++            maxCount = 3,
++            maxBytes = 1000L,
++            maxPoolSize = 1,
++            sizeOf = { it.bytes },
++            onRecycle = {
++                it.isRecycled = true
++                recycled.add(it)
++            }
++        )
++
++        cache.put(1, FakeBuffer(1))
++        cache.put(2, FakeBuffer(2))
++        cache.put(3, FakeBuffer(3))
++        assertEquals(3, cache.size)
++
++        // Adding 4th exceeds maxCount=3
++        cache.put(4, FakeBuffer(4))
++        assertEquals(3, cache.size)
++        assertFalse(cache.containsKey(1)) // Item 1 evicted
++        assertTrue(cache.containsKey(2))
++        assertTrue(cache.containsKey(3))
++        assertTrue(cache.containsKey(4))
++    }
++
++    @Test
++    fun evictionOrder_leastRecentlyUsedEvictedFirst() {
++        val cache = BoundedLruCache<String, FakeBuffer>(
++            maxCount = 3,
++            maxBytes = 1000L,
++            maxPoolSize = 0,
++            sizeOf = { it.bytes }
++        )
++
++        cache.put("A", FakeBuffer(1))
++        cache.put("B", FakeBuffer(2))
++        cache.put("C", FakeBuffer(3))
++
++        // Access "A" so "B" becomes the least recently used
++        val a = cache.get("A")
++        assertNotNull(a)
++
++        // Put "D" -> "B" should be evicted, not "A"
++        cache.put("D", FakeBuffer(4))
++        assertEquals(3, cache.size)
++        assertTrue(cache.containsKey("A"))
++        assertFalse(cache.containsKey("B"))
++        assertTrue(cache.containsKey("C"))
++        assertTrue(cache.containsKey("D"))
++    }
++
++    @Test
++    fun boundRespected_maxBytes_evictsWhenByteBudgetExceeded() {
++        val cache = BoundedLruCache<Int, FakeBuffer>(
++            maxCount = 10,
++            maxBytes = 250L,
++            maxPoolSize = 0,
++            sizeOf = { it.bytes } // 100 bytes each
++        )
++
++        cache.put(1, FakeBuffer(1, bytes = 100L))
++        cache.put(2, FakeBuffer(2, bytes = 100L))
++        assertEquals(200L, cache.byteCount)
++
++        // Adding 3rd item brings total to 300L > 250L maxBytes
++        cache.put(3, FakeBuffer(3, bytes = 100L))
++        assertEquals(2, cache.size)
++        assertEquals(200L, cache.byteCount)
++        assertFalse(cache.containsKey(1))
++        assertTrue(cache.containsKey(2))
++        assertTrue(cache.containsKey(3))
++    }
++
++    @Test
++    fun reusablePool_receivesEvictedItemsUpToPoolLimit_excessRecycled() {
++        val recycled = mutableListOf<FakeBuffer>()
++        val cache = BoundedLruCache<Int, FakeBuffer>(
++            maxCount = 2,
++            maxBytes = 1000L,
++            maxPoolSize = 2,
++            sizeOf = { it.bytes },
++            onRecycle = {
++                it.isRecycled = true
++                recycled.add(it)
++            }
++        )
++
++        cache.put(1, FakeBuffer(1))
++        cache.put(2, FakeBuffer(2))
++
++        // Evict 1 -> goes to pool
++        cache.put(3, FakeBuffer(3))
++        assertEquals(1, cache.poolSize)
++        assertEquals(0, recycled.size)
++
++        // Evict 2 -> goes to pool (pool size reaches maxPoolSize=2)
++        cache.put(4, FakeBuffer(4))
++        assertEquals(2, cache.poolSize)
++        assertEquals(0, recycled.size)
++
++        // Evict 3 -> pool is full, so item 3 is directly recycled
++        cache.put(5, FakeBuffer(5))
++        assertEquals(2, cache.poolSize)
++        assertEquals(1, recycled.size)
++        assertEquals(3, recycled[0].id)
++        assertTrue(recycled[0].isRecycled)
++
++        // Obtain reusable gives LIFO from pool
++        val reused1 = cache.obtainReusable()
++        assertNotNull(reused1)
++        assertEquals(2, reused1?.id)
++        assertEquals(1, cache.poolSize)
++
++        val reused2 = cache.obtainReusable()
++        assertNotNull(reused2)
++        assertEquals(1, reused2?.id)
++        assertEquals(0, cache.poolSize)
++
++        assertNull(cache.obtainReusable())
++    }
++
++    @Test
++    fun clear_recyclesAllCachedAndPooledItems_leavesZeroLeaks() {
++        val recycled = mutableListOf<FakeBuffer>()
++        val cache = BoundedLruCache<Int, FakeBuffer>(
++            maxCount = 5,
++            maxBytes = 1000L,
++            maxPoolSize = 2,
++            sizeOf = { it.bytes },
++            onRecycle = {
++                it.isRecycled = true
++                recycled.add(it)
++            }
++        )
++
++        cache.put(1, FakeBuffer(1))
++        cache.put(2, FakeBuffer(2))
++        cache.put(3, FakeBuffer(3))
++
++        // Force one into pool
++        cache.put(4, FakeBuffer(4))
++        cache.put(5, FakeBuffer(5))
++        cache.put(6, FakeBuffer(6)) // evicts 1 into pool
++        assertEquals(1, cache.poolSize)
++
++        // Clear everything
++        cache.clear()
++        assertEquals(0, cache.size)
++        assertEquals(0L, cache.byteCount)
++        assertEquals(0, cache.poolSize)
++        assertNull(cache.obtainReusable())
++
++        // All 6 items must be recycled
++        assertEquals(6, recycled.size)
++        assertTrue(recycled.all { it.isRecycled })
++    }
++}

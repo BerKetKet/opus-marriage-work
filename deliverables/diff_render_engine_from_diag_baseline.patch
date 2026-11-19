@@ -1,0 +1,346 @@
+diff --git a/rust/kr-core/src/page.rs b/rust/kr-core/src/page.rs
+index 00660f5..af06f6c 100644
+--- a/rust/kr-core/src/page.rs
++++ b/rust/kr-core/src/page.rs
+@@ -3091,7 +3091,7 @@ pub fn render_lines(
+ ) -> Vec<u8> {
+     let ir_page = layout_lines_to_ir(lines, cfg, family, bold, italic);
+     let mut rast = Rasterizer::new(Some(cfg.clone()));
+-    let out = rast.rasterize_page(&ir_page);
++    let out = rast.rasterize_page(&ir_page).to_vec();
+     rast.close();
+     out
+ }
+diff --git a/rust/kr-core/src/raster.rs b/rust/kr-core/src/raster.rs
+index 675d6da..b711072 100644
+--- a/rust/kr-core/src/raster.rs
++++ b/rust/kr-core/src/raster.rs
+@@ -816,6 +816,8 @@ impl GlyphCache {
+ pub struct Rasterizer {
+     pub cfg: Config,
+     pub cache: GlyphCache,
++    canvas_buf: Vec<f32>,
++    rgb_buf: Vec<u8>,
+ }
+ 
+ impl Rasterizer {
+@@ -826,12 +828,18 @@ impl Rasterizer {
+         Self {
+             cfg: c,
+             cache: GlyphCache::new(exact),
++            canvas_buf: Vec::new(),
++            rgb_buf: Vec::new(),
+         }
+     }
+ 
+     // py: raster.py:383 fn Rasterizer.close
+     pub fn close(&mut self) {
+         self.cache.close();
++        self.canvas_buf.clear();
++        self.canvas_buf.shrink_to_fit();
++        self.rgb_buf.clear();
++        self.rgb_buf.shrink_to_fit();
+     }
+ 
+     // py: raster.py:387 fn Rasterizer._draw_glyph_on_canvas
+@@ -884,13 +892,17 @@ impl Rasterizer {
+     }
+ 
+     // py: raster.py:401 fn Rasterizer.rasterize_page
+-    pub fn rasterize_page(&mut self, ir_page: &PositionedPage) -> Vec<u8> {
++    pub fn rasterize_page(&mut self, ir_page: &PositionedPage) -> &[u8] {
+         let h = ir_page.height.max(1) as usize;
+         let w = ir_page.width.max(1) as usize;
+-        let mut canvas = vec![0.0_f32; h * w * 3];
++        let needed_canvas_len = h * w * 3;
++        if self.canvas_buf.len() < needed_canvas_len {
++            self.canvas_buf.resize(needed_canvas_len, 0.0);
++        }
+         let bg0 = ir_page.bg.0 as f32;
+         let bg1 = ir_page.bg.1 as f32;
+         let bg2 = ir_page.bg.2 as f32;
++        let canvas = &mut self.canvas_buf[..needed_canvas_len];
+         for px in canvas.chunks_exact_mut(3) {
+             px[0] = bg0;
+             px[1] = bg1;
+@@ -915,7 +927,7 @@ impl Rasterizer {
+                                     *l_gid,
+                                 ) {
+                                     Self::_draw_glyph_on_canvas(
+-                                        &mut canvas,
++                                        &mut *canvas,
+                                         w,
+                                         h,
+                                         &lg,
+@@ -936,7 +948,7 @@ impl Rasterizer {
+                         gcmd.glyph_id,
+                     ) {
+                         Self::_draw_glyph_on_canvas(
+-                            &mut canvas,
++                            &mut *canvas,
+                             w,
+                             h,
+                             &g,
+@@ -1079,12 +1091,13 @@ impl Rasterizer {
+         }
+ 
+         // Quantize float32 canvas: `np.clip(canvas + 0.5, 0, 255).astype(np.uint8)`
+-        let mut out_rgb = Vec::with_capacity(canvas.len());
+-        for &v in &canvas {
+-            let q = (v + 0.5_f32).clamp(0.0_f32, 255.0_f32) as u8;
+-            out_rgb.push(q);
++        if self.rgb_buf.len() < needed_canvas_len {
++            self.rgb_buf.resize(needed_canvas_len, 0);
++        }
++        for (i, &v) in canvas.iter().enumerate() {
++            self.rgb_buf[i] = (v + 0.5_f32).clamp(0.0_f32, 255.0_f32) as u8;
+         }
+-        out_rgb
++        &self.rgb_buf[..needed_canvas_len]
+     }
+ 
+     // py: raster.py:457 fn Rasterizer.rasterize_document
+@@ -1096,7 +1109,7 @@ impl Rasterizer {
+         let limit = max_pages.unwrap_or(ir_doc.pages.len()).min(ir_doc.pages.len());
+         ir_doc.pages[..limit]
+             .iter()
+-            .map(|p| self.rasterize_page(p))
++            .map(|p| self.rasterize_page(p).to_vec())
+             .collect()
+     }
+ }
+@@ -1104,7 +1117,7 @@ impl Rasterizer {
+ // py: raster.py:462 fn rasterize
+ pub fn rasterize(ir_page: &PositionedPage, cfg: Option<Config>) -> Vec<u8> {
+     let mut r = Rasterizer::new(cfg);
+-    let out = r.rasterize_page(ir_page);
++    let out = r.rasterize_page(ir_page).to_vec();
+     r.close();
+     out
+ }
+diff --git a/rust/kr-jni/src/lib.rs b/rust/kr-jni/src/lib.rs
+index a844371..52c3115 100644
+--- a/rust/kr-jni/src/lib.rs
++++ b/rust/kr-jni/src/lib.rs
+@@ -339,9 +339,30 @@ pub extern "system" fn Java_app_opusreader_engine_JniNativeBridge_nativeClose<'l
+                 }
+             }
+         }
++        #[cfg(target_os = "android")]
++        unsafe {
++            extern "C" {
++                fn mallopt(param: std::os::raw::c_int, value: std::os::raw::c_int) -> std::os::raw::c_int;
++            }
++            mallopt(-101, 0);
++        }
+     }));
+ }
+ 
++#[no_mangle]
++pub extern "system" fn Java_app_opusreader_engine_JniNativeBridge_nativeTrimMemory<'local>(
++    _env: JNIEnv<'local>,
++    _class: JClass<'local>,
++) {
++    #[cfg(target_os = "android")]
++    unsafe {
++        extern "C" {
++            fn mallopt(param: std::os::raw::c_int, value: std::os::raw::c_int) -> std::os::raw::c_int;
++        }
++        mallopt(-101, 0);
++    }
++}
++
+ #[cfg(test)]
+ mod tests {
+     use super::*;
+diff --git a/tools/compare_pages.py b/tools/compare_pages.py
+new file mode 100644
+index 0000000..b1c9d2a
+--- /dev/null
++++ b/tools/compare_pages.py
+@@ -0,0 +1,102 @@
++#!/usr/bin/env python3
++import numpy as np
++from PIL import Image
++import os, pathlib, json
++
++base = pathlib.Path(__file__).resolve().parent.parent.parent
++oracle_dir = base / "deliverables" / "oracle_py"
++engine_dir = base / "deliverables" / "engine_device"
++compare_dir = base / "deliverables" / "compare"
++compare_dir.mkdir(parents=True, exist_ok=True)
++
++pairs = [
++    ("normal", 0, 0),
++    ("normal", 1, 1),
++    ("normal", 2, 2),
++    ("normal", 10, 10),
++    ("normal", 20, 20),
++    ("normal", 30, 30),
++    ("normal", 40, 40),
++    ("normal", 50, 50),
++    ("normal", 81, 84),
++    ("small", 0, 0),
++    ("small", 1, 1),
++    ("small", 2, 2),
++    ("small", 10, 10),
++    ("small", 20, 20),
++    ("small", 30, 30),
++    ("small", 40, 40),
++    ("small", 50, 50),
++    ("small", 53, 53),
++]
++
++results = []
++header = f"{'Type':<8} | {'Page':<6} | {'Identical %':<12} | {'Tolerant %':<12} | {'MAD':<8} | {'MaxDiff':<8} | Bounding Box"
++print(header)
++print("-" * 88)
++
++for geom, o_idx, e_idx in pairs:
++    o_path = oracle_dir / f"oracle_{geom}_page_{o_idx:03d}.png"
++    e_path = engine_dir / f"engine_{geom}_page_{e_idx:03d}.png"
++    
++    if not o_path.exists() or not e_path.exists():
++        print(f"Missing: {o_path.name} or {e_path.name}")
++        continue
++        
++    o_img = Image.open(o_path).convert("RGB")
++    e_img = Image.open(e_path).convert("RGB")
++    
++    o_arr = np.array(o_img, dtype=np.int16)
++    e_arr = np.array(e_img, dtype=np.int16)
++    
++    diff = np.abs(o_arr - e_arr)
++    max_diff_px = np.max(diff, axis=2)
++    
++    total_px = o_arr.shape[0] * o_arr.shape[1]
++    identical_px = int(np.sum(max_diff_px == 0))
++    tolerant_px = int(np.sum(max_diff_px <= 2))
++    
++    ident_pct = (identical_px / total_px) * 100.0
++    tol_pct = (tolerant_px / total_px) * 100.0
++    mad = float(np.mean(diff))
++    max_d = int(np.max(diff))
++    
++    diff_mask = max_diff_px > 0
++    if np.any(diff_mask):
++        ys, xs = np.where(diff_mask)
++        bbox = f"({xs.min()},{ys.min()})-({xs.max()},{ys.max()})"
++    else:
++        bbox = "None (Identical)"
++        
++    # Generate side-by-side comparison with diff heatmap
++    # Heatmap: black background, red for diff > 0, yellow for diff > 2
++    diff_vis = np.zeros_like(o_arr, dtype=np.uint8)
++    diff_vis[max_diff_px > 0] = [255, 0, 0]
++    diff_vis[max_diff_px > 2] = [255, 255, 0]
++    
++    # Create 3-panel: Oracle | Engine | Diff
++    w, h = o_img.size
++    side_by_side = Image.new("RGB", (w * 3, h))
++    side_by_side.paste(o_img, (0, 0))
++    side_by_side.paste(e_img, (w, 0))
++    side_by_side.paste(Image.fromarray(diff_vis), (w * 2, 0))
++    
++    vis_name = f"compare_{geom}_p{o_idx:03d}_vs_e{e_idx:03d}.png"
++    side_by_side.save(str(compare_dir / vis_name))
++    
++    results.append({
++        "geom": geom,
++        "oracle_page": o_idx,
++        "engine_page": e_idx,
++        "ident_pct": ident_pct,
++        "tol_pct": tol_pct,
++        "mad": mad,
++        "max_d": max_d,
++        "bbox": bbox,
++        "image": vis_name
++    })
++    
++    print(f"{geom:<8} | {o_idx:<6} | {ident_pct:10.4f}% | {tol_pct:10.4f}% | {mad:8.4f} | {max_d:<8} | {bbox}")
++
++(compare_dir / "parity_results.json").write_text(json.dumps(results, indent=2))
++print(f"\nSaved comparison images and parity_results.json to {compare_dir}")
+diff --git a/tools/export_parity_reference.py b/tools/export_parity_reference.py
+new file mode 100644
+index 0000000..fd794d6
+--- /dev/null
++++ b/tools/export_parity_reference.py
+@@ -0,0 +1,77 @@
++#!/usr/bin/env python3
++import sys
++import os
++import pathlib
++from PIL import Image
++
++REPO = pathlib.Path(__file__).resolve().parent.parent
++sys.path.insert(0, str(REPO))
++
++from kindle_render.config import Config
++from kindle_render.epub import load_epub
++from kindle_render.fonts import Family
++from kindle_render.page import layout_blocks_to_ir
++from kindle_render.raster import Rasterizer
++
++OUT_DIR = REPO / "deliverables" / "oracle_py"
++OUT_DIR.mkdir(parents=True, exist_ok=True)
++
++# 1. exam3_normal (geometry 3: 45px / 68 pitch)
++cfg_normal = Config("kindle_render/fonts", exact_raster=True)
++cfg_normal.size26 = 2880
++cfg_normal.pitch = 68
++cfg_normal.x0 = 79
++cfg_normal.right = 1001
++cfg_normal.top = 168
++cfg_normal.page_bottom = 2203
++cfg_normal.screen_w = 1080
++cfg_normal.screen_h = 2340
++
++blocks_n = load_epub("corpora/kindle_exam_v3.epub", cfg_normal)
++fam_n = Family(cfg_normal)
++ir_doc_n = layout_blocks_to_ir(blocks_n, cfg_normal, fam_n)
++
++normal_indices = [0, 1, 2, 10, 20, 30, 40, 50, len(ir_doc_n.pages) - 1]
++print(f"Rasterizing normal pages: {normal_indices} (total {len(ir_doc_n.pages)})")
++
++rast_n = Rasterizer(cfg_normal)
++try:
++    for p_idx in normal_indices:
++        p = ir_doc_n.pages[p_idx]
++        img = rast_n.rasterize_page(p)
++        out_path = OUT_DIR / f"oracle_normal_page_{p_idx:03d}.png"
++        img.save(str(out_path))
++        print(f"Saved {out_path.name}")
++finally:
++    rast_n.close()
++
++# 2. exam3_small (geometry 0: 34px / 51 pitch)
++cfg_small = Config("kindle_render/fonts", exact_raster=True)
++cfg_small.size26 = 2176
++cfg_small.pitch = 51
++cfg_small.x0 = 79
++cfg_small.right = 1001
++cfg_small.top = 168
++cfg_small.page_bottom = 2203
++cfg_small.screen_w = 1080
++cfg_small.screen_h = 2340
++
++blocks_s = load_epub("corpora/kindle_exam_v3.epub", cfg_small)
++fam_s = Family(cfg_small)
++ir_doc_s = layout_blocks_to_ir(blocks_s, cfg_small, fam_s)
++
++small_indices = [0, 1, 2, 10, 20, 30, 40, 50, len(ir_doc_s.pages) - 1]
++print(f"Rasterizing small pages: {small_indices} (total {len(ir_doc_s.pages)})")
++
++rast_s = Rasterizer(cfg_small)
++try:
++    for p_idx in small_indices:
++        p = ir_doc_s.pages[p_idx]
++        img = rast_s.rasterize_page(p)
++        out_path = OUT_DIR / f"oracle_small_page_{p_idx:03d}.png"
++        img.save(str(out_path))
++        print(f"Saved {out_path.name}")
++finally:
++    rast_s.close()
++
++print("ALL ORACLE PAGES GENERATED SUCCESSFULLY")
