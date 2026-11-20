@@ -1,0 +1,32 @@
+== opus-reader ==
+branch/status:
+## master
+remotes:
+
+log (last 40):
+369ad4c fix(reader): enable true edge-to-edge fullscreen reading mode (Task T2)
+0f7146b fix(reader): reorder birds-eye thumbnails button above scrubber surface to receive touch events (Task T1)
+5e757ff feat(reader): implement display settings sheet (Aa) with honest engine geometries and themes (slice S07)
+e0124fc feat(import): add real EPUB import in Library, VIEW intent filter, and error handling (Stage E3)
+cf696a3 feat(parity): wire deep link geometry index and device parity dumps (Stage E2)
+c605a0d E1: bounded PageBitmapLruCache, bitmap reuse pool, cancellable single-thread prefetch, trim memory
+5a93ebe fix(reader): support real EPUB import, fix hyphen assets, and verify on-device reading
+a956e59 chore(scrub): redact hardware serial for public review
+9bc1160 Configure androidTest font assets and add device benchmark in NativeReaderEngineParityTest (Gate D1)
+811664b Fix unmocked RectF string interpolation in NativeReaderEngineTest
+fa4045d baseline: opus-reader initial commit
+
+== render.engine ==
+branch/status:
+## master
+remotes:
+
+log (last 40):
+990eded feat(parity): add tools for oracle reference export and page comparison (Stage E2)
+951dc2a E1: reuse rasterizer canvas and rgb buffers, trim memory via mallopt
+76447a0 Fix clippy warnings with -D warnings and add 500-iteration EPUB mutation fuzzer (Gate P6)
+d00a458 Add build_native_deps.sh and kr-jni/build.rs for static arm64-v8a NDK build (Gate N1)
+67cb71e A3: Gates P1, P2, P3 100% PASS - IR roundtrip, FreeType rasterizer with tilde split & images, Wire Format v1 page models
+9aa4529 A2: establish Gate P0 Python oracle truth, golden_local, and parity_check --golden-dir
+a1b55e0 A1: add tools/run_in_container.sh for containerized builds and parity runs
+547d019 baseline: render.engine initial commit

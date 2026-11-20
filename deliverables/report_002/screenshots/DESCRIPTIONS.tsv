@@ -1,0 +1,48 @@
+t0_initial_device_screen.png	Initial device screen showing Kindle Home
+t0_kindle_book_opened.png	Kindle reading view with book opened in full screen
+t0_kindle_chrome_active.png	Kindle reading view with chrome active showing top and bottom bars
+t0_kindle_aa_sheet_initial.png	Kindle Aa display settings sheet Font tab initial state
+t0_kindle_aa_sheet_layout.png	Kindle Aa display settings sheet Layout tab initial state
+t0_kindle_aa_sheet_themes.png	Kindle Aa display settings sheet Themes tab initial state
+t0_kindle_aa_sheet_more.png	Kindle Aa display settings sheet More tab initial state
+t1_opus_reader_opened.png	Opus Reader opened with kindle_exam_v3 on cover page
+t1_opus_chrome_shown.png	Opus Reader with chrome active showing top and bottom bars
+t1_tap_back.png	Result of tapping Back button in Opus Reader chrome
+t1_tap_contents.png	Result of tapping Contents TOC button in Opus Reader chrome
+t1_tap_search.png	Result of tapping Search button in Opus Reader chrome
+t1_tap_notebook.png	Result of tapping Notebook annotations button in Opus Reader chrome
+t1_tap_bookmark.png	Result of tapping Bookmark button in Opus Reader chrome
+t1_tap_aa.png	Result of tapping Display Settings Aa button in Opus Reader chrome
+t1_tap_overflow.png	Result of tapping More Options overflow button in Opus Reader chrome
+t1_tap_thumbnails_fixed.png	Result of tapping Thumbnails birds-eye button in Opus Reader after z-order fix
+t2_page1_edge_to_edge.png	Opus Reader Kindle Exam v3 Page 1 cover in true edge-to-edge reading mode with zero top black bar
+t2_middle_edge_to_edge.png	Opus Reader Kindle Exam v3 middle text page in true edge-to-edge reading mode
+t2_chrome_overlay.png	Opus Reader reading view with chrome overlay active showing top and bottom bars over content
+t2_second_book_page1.png	Opus Reader Kindle Exam v2 Page 1 cover confirming edge-to-edge layout and 360px margins on a second book
+t3_library_before_import.png	Opus Reader Library screen before importing test EPUB
+t3_system_file_picker.png	Android system DocumentsUI file picker selecting test_import_v2.epub from Downloads
+t3_library_after_import.png	Opus Reader Library screen after import showing newly added book tile with NEW badge
+t3_imported_book_reading.png	Opus Reader reading view displaying newly imported book
+t3_settings_sheet_font_tab.png	Opus Reader Display Settings (Aa) sheet Font tab showing calibrated sizes
+t3_settings_sheet_themes_tab.png	Opus Reader Display Settings (Aa) sheet Themes tab
+t3_reflow_before_normal.png	Opus Reader reading page at Normal font size (42px) before reflow
+t3_reflow_after_small.png	Opus Reader reading page at Small font size (34px) after reflow preserving locator
+K100.png	Reading view, chrome hidden
+K101.png	Reading view, chrome shown
+K102.png	Reader tap zones (left page turn)
+K103.png	Reader page turn by swipe
+K104.png	First page (cover) view
+K105.png	Reading progress footer cycle
+K110.png	Top bar controls in Kindle
+K111.png	Bookmark added indicator
+K112.png	Overflow side sheet menu
+K120.png	Aa Display settings sheet Font tab
+K121.png	Aa Display settings sheet Layout tab and themes
+K122.png	Aa Display settings sheet Themes tab
+K130.png	Kindle page-flip carousel with cards and back affordance
+K131.png	Kindle 9-dot thumbnail grid view
+K132.png	Kindle Table of Contents screen
+K133.png	Notebook bookmarks and annotations list
+K134.png	In-book search screen
+K140.png	Kindle text selection toolbar and dictionary card
+K141.png	Highlight color selection and annotation popup

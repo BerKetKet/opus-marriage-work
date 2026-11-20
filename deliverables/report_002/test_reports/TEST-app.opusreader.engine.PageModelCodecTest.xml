@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.opusreader.engine.PageModelCodecTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-20T08:52:03" hostname="mycachy" time="0.082">
+  <properties/>
+  <testcase name="escapeAndUnescape_roundTripsTabsNewlinesBackslashesAndEmoji" classname="app.opusreader.engine.PageModelCodecTest" time="0.0"/>
+  <testcase name="bookModel_roundTrip_preservesMetadataSpinesAndToc" classname="app.opusreader.engine.PageModelCodecTest" time="0.0"/>
+  <testcase name="pageModel_roundTrip_handlesHugePageWith1200Words" classname="app.opusreader.engine.PageModelCodecTest" time="0.067"/>
+  <testcase name="pageModel_roundTrip_handlesEmptyPageSpecialCharsRtlAndEmoji" classname="app.opusreader.engine.PageModelCodecTest" time="0.002"/>
+  <testcase name="kindleGeometry_distinguishesCalibratedPresetsFromExtrapolatedSettings" classname="app.opusreader.engine.PageModelCodecTest" time="0.0"/>
+  <testcase name="malformedWireInput_throwsEngineExceptionNeverPanics" classname="app.opusreader.engine.PageModelCodecTest" time="0.011"/>
+  <testcase name="utf16AndCodePointConversion_handlesAstralSurrogatePairsCorrectly" classname="app.opusreader.engine.PageModelCodecTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

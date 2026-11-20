@@ -1,0 +1,128 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 2340" width="540" height="1170" font-family="sans-serif">
+<rect width="100%" height="100%" fill="#fff" stroke="#000" stroke-width="2"/>
+<rect x="0" y="0" width="1080" height="2340" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<rect x="0" y="0" width="1080" height="2340" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<rect x="0" y="0" width="1080" height="2340" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<rect x="0" y="0" width="1080" height="2340" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="6" y="26" font-size="22" fill="#9e9e9e">action_bar_root</text>
+<rect x="0" y="0" width="1080" height="2340" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="6" y="26" font-size="22" fill="#9e9e9e">content</text>
+<rect x="0" y="0" width="1080" height="2340" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="6" y="26" font-size="22" fill="#9e9e9e">reader_drawer_layout</text>
+<rect x="0" y="0" width="1080" height="2340" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="6" y="26" font-size="22" fill="#9e9e9e">notepad_fragment_container</text>
+<rect x="0" y="0" width="1080" height="2340" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="6" y="26" font-size="22" fill="#9e9e9e">reader_under_drawer</text>
+<rect x="0" y="0" width="1080" height="2340" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="6" y="26" font-size="22" fill="#9e9e9e">content_container</text>
+<rect x="0" y="0" width="1080" height="2340" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<rect x="0" y="0" width="1080" height="2340" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="6" y="26" font-size="22" fill="#9e9e9e">full_audio_player_container</text>
+<rect x="0" y="0" width="1080" height="2340" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="6" y="26" font-size="22" fill="#9e9e9e">jedi_reading_dashboard</text>
+<rect x="0" y="0" width="1080" height="2340" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<rect x="0" y="0" width="1080" height="2340" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="6" y="26" font-size="22" fill="#9e9e9e">bottom_sheet_container</text>
+<rect x="0" y="0" width="1080" height="2340" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<rect x="0" y="0" width="1080" height="2340" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<rect x="0" y="0" width="1080" height="2340" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="6" y="26" font-size="22" fill="#9e9e9e">main_panel</text>
+<rect x="0" y="0" width="1080" height="2340" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="6" y="26" font-size="22" fill="#9e9e9e">reader_menu_container</text>
+<rect x="0" y="0" width="1080" height="2340" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="6" y="26" font-size="22" fill="#9e9e9e">magnified_content_container</text>
+<rect x="0" y="0" width="1080" height="2340" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="6" y="26" font-size="22" fill="#9e9e9e">jedi_chrome_rewrite_container</text>
+<rect x="0" y="0" width="1080" height="2340" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<rect x="0" y="0" width="1080" height="2340" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="6" y="26" font-size="22" fill="#9e9e9e">reader_chrome_fragment_container</text>
+<rect x="0" y="0" width="1080" height="2340" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="6" y="26" font-size="22" fill="#9e9e9e">reader_content_fragment_container</text>
+<rect x="0" y="0" width="1080" height="2340" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="6" y="26" font-size="22" fill="#9e9e9e">reader_page_fragment_container</text>
+<rect x="0" y="0" width="1080" height="2340" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="6" y="26" font-size="22" fill="#9e9e9e">reader_content_container</text>
+<rect x="0" y="0" width="1080" height="2340" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<rect x="0" y="0" width="1080" height="2340" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<rect x="0" y="0" width="1080" height="2340" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="6" y="26" font-size="22" fill="#9e9e9e">pinnable_content_previewer_overlay</text>
+<rect x="0" y="0" width="1080" height="2340" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<rect x="0" y="0" width="1080" height="2340" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="6" y="26" font-size="22" fill="#9e9e9e">ipw_notepad_fragment_container</text>
+<rect x="0" y="0" width="1080" height="2340" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="6" y="26" font-size="22" fill="#9e9e9e">writing_toolbar_overlay</text>
+<rect x="0" y="0" width="1080" height="2340" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<rect x="0" y="0" width="1080" height="2340" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="6" y="26" font-size="22" fill="#9e9e9e">object_selection_view</text>
+<rect x="0" y="0" width="1080" height="2340" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="6" y="26" font-size="22" fill="#9e9e9e">reader_view_bookmark_container</text>
+<rect x="966" y="0" width="114" height="137" fill="none" stroke="#1565c0" stroke-width="3"/>
+<text x="972" y="26" font-size="22" fill="#1565c0">Add bookmark</text>
+<rect x="0" y="0" width="1080" height="2340" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="6" y="26" font-size="22" fill="#9e9e9e">selection_buttons_menu</text>
+<rect x="0" y="0" width="1080" height="2340" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<rect x="0" y="0" width="1080" height="2340" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<rect x="0" y="0" width="1080" height="2340" fill="none" stroke="#1565c0" stroke-width="3"/>
+<text x="6" y="26" font-size="22" fill="#1565c0">Dismiss selection</text>
+<rect x="31" y="645" width="901" height="230" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<rect x="31" y="645" width="901" height="230" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<rect x="73" y="661" width="817" height="177" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<rect x="73" y="661" width="199" height="177" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<rect x="73" y="661" width="199" height="177" fill="none" stroke="#1565c0" stroke-width="3"/>
+<text x="79" y="687" font-size="22" fill="#1565c0">Annotate</text>
+<rect x="293" y="661" width="127" height="177" fill="none" stroke="#1565c0" stroke-width="3"/>
+<text x="299" y="687" font-size="22" fill="#1565c0">Note</text>
+<rect x="441" y="661" width="127" height="177" fill="none" stroke="#1565c0" stroke-width="3"/>
+<text x="447" y="687" font-size="22" fill="#1565c0">Copy</text>
+<rect x="589" y="661" width="127" height="177" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<rect x="589" y="661" width="127" height="177" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="595" y="687" font-size="22" fill="#9e9e9e">cab_menu_pin_button</text>
+<rect x="589" y="661" width="127" height="177" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<rect x="589" y="661" width="127" height="177" fill="none" stroke="#1565c0" stroke-width="3"/>
+<text x="595" y="687" font-size="22" fill="#1565c0">Pin</text>
+<rect x="737" y="661" width="153" height="177" fill="none" stroke="#1565c0" stroke-width="3"/>
+<text x="743" y="687" font-size="22" fill="#1565c0">Report</text>
+<rect x="0" y="0" width="1080" height="2340" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="6" y="26" font-size="22" fill="#9e9e9e">compose_infosheet_container</text>
+<rect x="0" y="0" width="1080" height="2340" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<rect x="0" y="0" width="1080" height="2340" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<rect x="0" y="0" width="1080" height="1521" fill="none" stroke="#1565c0" stroke-width="3"/>
+<text x="6" y="26" font-size="22" fill="#1565c0">Close information lookup</text>
+<rect x="0" y="0" width="1080" height="2340" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<rect x="0" y="1521" width="1080" height="819" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<rect x="0" y="1553" width="1080" height="787" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<rect x="478" y="1508" width="126" height="126" fill="none" stroke="#1565c0" stroke-width="3"/>
+<text x="484" y="1534" font-size="22" fill="#1565c0">Close information lookup</text>
+<rect x="42" y="1588" width="996" height="126" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<rect x="366" y="1588" width="126" height="126" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="372" y="1614" font-size="22" fill="#9e9e9e">Pronunciation</text>
+<rect x="492" y="1626" width="96" height="50" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="498" y="1652" font-size="22" fill="#9e9e9e">have</text>
+<rect x="0" y="1714" width="1080" height="626" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<rect x="21" y="1725" width="1038" height="472" fill="none" stroke="#1565c0" stroke-width="3"/>
+<rect x="74" y="1751" width="932" height="420" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<rect x="74" y="1778" width="806" height="72" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="80" y="1804" font-size="22" fill="#9e9e9e">Dictionary</text>
+<rect x="880" y="1751" width="126" height="126" fill="none" stroke="#1565c0" stroke-width="3"/>
+<text x="886" y="1777" font-size="22" fill="#1565c0">Dictionary. Collapsed.</text>
+<rect x="95" y="1877" width="890" height="294" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<rect x="95" y="1877" width="890" height="126" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="101" y="1903" font-size="22" fill="#9e9e9e">To display definitions, select a languag</text>
+<rect x="95" y="2025" width="445" height="126" fill="none" stroke="#1565c0" stroke-width="3"/>
+<rect x="158" y="2056" width="319" height="63" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="164" y="2082" font-size="22" fill="#9e9e9e">English (US)</text>
+<rect x="95" y="2035" width="445" height="105" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<rect x="540" y="2025" width="445" height="126" fill="none" stroke="#1565c0" stroke-width="3"/>
+<rect x="687" y="2035" width="151" height="105" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="693" y="2061" font-size="22" fill="#9e9e9e">Download dictionary</text>
+<rect x="540" y="2035" width="445" height="105" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<rect x="21" y="2219" width="1038" height="121" fill="none" stroke="#1565c0" stroke-width="3"/>
+<rect x="74" y="2245" width="932" height="95" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<rect x="74" y="2272" width="806" height="68" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="80" y="2298" font-size="22" fill="#9e9e9e">Wikipedia</text>
+<rect x="880" y="2245" width="126" height="95" fill="none" stroke="#1565c0" stroke-width="3"/>
+<text x="886" y="2271" font-size="22" fill="#1565c0">Wikipedia. Collapsed.</text>
+<rect x="870" y="2193" width="210" height="147" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="876" y="2219" font-size="22" fill="#9e9e9e">pinnable_content_pin_indicator</text>
+<rect x="870" y="2193" width="210" height="147" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+</svg>

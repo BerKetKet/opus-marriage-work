@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 2340" width="540" height="1170" font-family="sans-serif">
+<rect width="100%" height="100%" fill="#fff" stroke="#000" stroke-width="2"/>
+<rect x="0" y="0" width="1080" height="2340" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<rect x="0" y="0" width="1080" height="2277" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<rect x="0" y="83" width="1080" height="1374" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<rect x="0" y="83" width="1080" height="1374" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="6" y="109" font-size="22" fill="#9e9e9e">decor_content_parent</text>
+<rect x="0" y="83" width="1080" height="168" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="6" y="109" font-size="22" fill="#9e9e9e">action_bar_container</text>
+<rect x="0" y="83" width="1080" height="168" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="6" y="109" font-size="22" fill="#9e9e9e">action_bar</text>
+<rect x="0" y="93" width="147" height="147" fill="none" stroke="#1565c0" stroke-width="3"/>
+<text x="6" y="119" font-size="22" fill="#1565c0">Navigate up</text>
+<rect x="189" y="93" width="891" height="147" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<rect x="189" y="103" width="891" height="126" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="195" y="129" font-size="22" fill="#9e9e9e">search</text>
+<rect x="189" y="103" width="891" height="126" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="195" y="129" font-size="22" fill="#9e9e9e">search_bar</text>
+<rect x="210" y="103" width="849" height="126" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="216" y="129" font-size="22" fill="#9e9e9e">search_edit_frame</text>
+<rect x="210" y="103" width="849" height="126" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="216" y="129" font-size="22" fill="#9e9e9e">search_plate</text>
+<rect x="210" y="117" width="849" height="95" fill="none" stroke="#1565c0" stroke-width="3"/>
+<text x="216" y="143" font-size="22" fill="#1565c0">SEARCH</text>
+<rect x="0" y="251" width="1080" height="1206" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="6" y="277" font-size="22" fill="#9e9e9e">content</text>
+<rect x="0" y="251" width="1080" height="1206" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="6" y="277" font-size="22" fill="#9e9e9e">reader_search_activity</text>
+<rect x="0" y="251" width="1080" height="1206" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="6" y="277" font-size="22" fill="#9e9e9e">search_result_container</text>
+<rect x="0" y="251" width="1080" height="1206" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="6" y="277" font-size="22" fill="#9e9e9e">recent_search_terms_empty_view</text>
+<rect x="0" y="367" width="1080" height="102" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="6" y="393" font-size="22" fill="#9e9e9e">Find exactly what you're looking for in </text>
+<rect x="0" y="0" width="1080" height="83" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="6" y="26" font-size="22" fill="#9e9e9e">statusBarBackground</text>
+<rect x="0" y="2277" width="1080" height="63" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="6" y="2303" font-size="22" fill="#9e9e9e">navigationBarBackground</text>
+</svg>

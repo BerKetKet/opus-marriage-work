@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.opusreader.design.DesignTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-20T08:52:00" hostname="mycachy" time="0.093">
+  <properties/>
+  <testcase name="colorContrast_backgroundAndText_isSufficient" classname="app.opusreader.design.DesignTest" time="0.039"/>
+  <testcase name="dimensions_minimumTouchTargets_satisfyMaterialStandards" classname="app.opusreader.design.DesignTest" time="0.003"/>
+  <testcase name="readerChrome_tokensAndDimensions_meetDesignSpecifications" classname="app.opusreader.design.DesignTest" time="0.001"/>
+  <testcase name="typography_explicitLineHeights_andNonZeroFontSizes" classname="app.opusreader.design.DesignTest" time="0.048"/>
+  <testcase name="sheetDimensions_handleGeometryMatchesKindleSpecification" classname="app.opusreader.design.DesignTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

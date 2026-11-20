@@ -1,0 +1,251 @@
+diff --git a/app/src/main/java/app/opusreader/MainActivity.kt b/app/src/main/java/app/opusreader/MainActivity.kt
+index 425fcde..963229c 100644
+--- a/app/src/main/java/app/opusreader/MainActivity.kt
++++ b/app/src/main/java/app/opusreader/MainActivity.kt
+@@ -1,9 +1,13 @@
+ package app.opusreader
+ 
+ import android.content.Intent
++import android.graphics.Color
++import android.os.Build
+ import android.os.Bundle
++import android.view.WindowManager
+ import androidx.activity.ComponentActivity
+ import androidx.activity.compose.setContent
++import androidx.core.view.WindowCompat
+ import androidx.lifecycle.lifecycleScope
+ import kotlinx.coroutines.Dispatchers
+ import kotlinx.coroutines.launch
+@@ -21,6 +25,14 @@ class MainActivity : ComponentActivity() {
+ 
+     override fun onCreate(savedInstanceState: Bundle?) {
+         super.onCreate(savedInstanceState)
++        WindowCompat.setDecorFitsSystemWindows(window, false)
++        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
++            window.attributes.layoutInDisplayCutoutMode =
++                WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
++        }
++        window.statusBarColor = Color.TRANSPARENT
++        window.navigationBarColor = Color.TRANSPARENT
++
+         app.opusreader.debug.DebugFixtureController.ensureDefaultData(this)
+         handleIntent(intent)
+ 
+diff --git a/app/src/main/java/app/opusreader/feature/reader/ReaderScreen.kt b/app/src/main/java/app/opusreader/feature/reader/ReaderScreen.kt
+index dd551f0..e53499e 100644
+--- a/app/src/main/java/app/opusreader/feature/reader/ReaderScreen.kt
++++ b/app/src/main/java/app/opusreader/feature/reader/ReaderScreen.kt
+@@ -26,9 +26,11 @@ import androidx.compose.foundation.layout.Spacer
+ import androidx.compose.foundation.layout.fillMaxSize
+ import androidx.compose.foundation.layout.fillMaxWidth
+ import androidx.compose.foundation.layout.height
++import androidx.compose.foundation.layout.navigationBarsPadding
+ import androidx.compose.foundation.layout.offset
+ import androidx.compose.foundation.layout.padding
+ import androidx.compose.foundation.layout.size
++import androidx.compose.foundation.layout.statusBarsPadding
+ import androidx.compose.foundation.layout.width
+ import androidx.compose.foundation.lazy.grid.GridCells
+ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+@@ -132,14 +134,17 @@ fun ReaderScreen(
+                 insetsController.hide(WindowInsetsCompat.Type.systemBars())
+                 insetsController.systemBarsBehavior =
+                     WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+-                window.statusBarColor = OpusColors.PageBlack.toArgb()
+-                window.navigationBarColor = OpusColors.PageBlack.toArgb()
++                window.statusBarColor = android.graphics.Color.TRANSPARENT
++                window.navigationBarColor = android.graphics.Color.TRANSPARENT
+             }
+         }
+         onDispose {
+             val window = activity?.window
+             if (window != null) {
+-                WindowInsetsControllerCompat(window, view).show(WindowInsetsCompat.Type.systemBars())
++                val insetsController = WindowInsetsControllerCompat(window, view)
++                insetsController.show(WindowInsetsCompat.Type.systemBars())
++                window.statusBarColor = android.graphics.Color.TRANSPARENT
++                window.navigationBarColor = android.graphics.Color.TRANSPARENT
+             }
+         }
+     }
+@@ -621,16 +626,23 @@ fun ReaderScreen(
+             exit = fadeOut() + slideOutVertically(targetOffsetY = { -it }),
+             modifier = Modifier.align(Alignment.TopCenter)
+         ) {
+-            OpusReaderTopBar(
+-                isBookmarked = uiState.isBookmarked,
+-                onBackClick = onBackClick,
+-                onContentsClick = { onOpenSheet(ActiveReaderSheet.CONTENTS) },
+-                onSearchClick = { onOpenSheet(ActiveReaderSheet.SEARCH) },
+-                onNotebookClick = { onOpenSheet(ActiveReaderSheet.ANNOTATIONS) },
+-                onBookmarkClick = onToggleBookmark,
+-                onDisplaySettingsClick = { onOpenSheet(ActiveReaderSheet.SETTINGS) },
+-                onOverflowClick = { onOpenSheet(ActiveReaderSheet.OVERFLOW) }
+-            )
++            Box(
++                modifier = Modifier
++                    .fillMaxWidth()
++                    .background(OpusColors.ReaderChromeTopDark)
++                    .statusBarsPadding()
++            ) {
++                OpusReaderTopBar(
++                    isBookmarked = uiState.isBookmarked,
++                    onBackClick = onBackClick,
++                    onContentsClick = { onOpenSheet(ActiveReaderSheet.CONTENTS) },
++                    onSearchClick = { onOpenSheet(ActiveReaderSheet.SEARCH) },
++                    onNotebookClick = { onOpenSheet(ActiveReaderSheet.ANNOTATIONS) },
++                    onBookmarkClick = onToggleBookmark,
++                    onDisplaySettingsClick = { onOpenSheet(ActiveReaderSheet.SETTINGS) },
++                    onOverflowClick = { onOpenSheet(ActiveReaderSheet.OVERFLOW) }
++                )
++            }
+         }
+ 
+         // Animated Bottom Chrome Bar
+@@ -640,14 +652,21 @@ fun ReaderScreen(
+             exit = fadeOut() + slideOutVertically(targetOffsetY = { it }),
+             modifier = Modifier.align(Alignment.BottomCenter)
+         ) {
+-            OpusReaderBottomBar(
+-                currentLocation = uiState.scrubberLocation,
+-                totalLocations = uiState.totalLocations,
+-                percent = uiState.progress.percent,
+-                onThumbnailsClick = onToggleThumbnails,
+-                onScrubberChange = onScrubberChange,
+-                onScrubberCommit = onScrubberCommit
+-            )
++            Box(
++                modifier = Modifier
++                    .fillMaxWidth()
++                    .background(OpusColors.ReaderChromeBottomDark)
++                    .navigationBarsPadding()
++            ) {
++                OpusReaderBottomBar(
++                    currentLocation = uiState.scrubberLocation,
++                    totalLocations = uiState.totalLocations,
++                    percent = uiState.progress.percent,
++                    onThumbnailsClick = onToggleThumbnails,
++                    onScrubberChange = onScrubberChange,
++                    onScrubberCommit = onScrubberCommit
++                )
++            }
+         }
+ 
+         // Thumbnails Grid Overlay
+diff --git a/app/src/main/java/app/opusreader/navigation/OpusNavHost.kt b/app/src/main/java/app/opusreader/navigation/OpusNavHost.kt
+index 2c7a060..7f422d0 100644
+--- a/app/src/main/java/app/opusreader/navigation/OpusNavHost.kt
++++ b/app/src/main/java/app/opusreader/navigation/OpusNavHost.kt
+@@ -5,7 +5,9 @@ import androidx.activity.compose.rememberLauncherForActivityResult
+ import androidx.activity.result.contract.ActivityResultContracts
+ import androidx.compose.foundation.layout.Box
+ import androidx.compose.foundation.layout.fillMaxSize
++import androidx.compose.foundation.layout.navigationBarsPadding
+ import androidx.compose.foundation.layout.padding
++import androidx.compose.foundation.layout.statusBarsPadding
+ import androidx.compose.material.icons.Icons
+ import androidx.compose.material.icons.filled.Home
+ import androidx.compose.material.icons.filled.LocalLibrary
+@@ -141,7 +143,9 @@ fun OpusNavHost(
+                     resumeBook = libraryUiState.lastReadBook,
+                     onOpenBook = { bookId -> navController.navigate("reader/$bookId") },
+                     onSearchClick = { navController.navigate(Screen.Library.route) },
+-                    modifier = Modifier.testTag("screen_home")
++                    modifier = Modifier
++                        .statusBarsPadding()
++                        .testTag("screen_home")
+                 )
+             }
+             composable(Screen.Library.route) {
+@@ -178,12 +182,16 @@ fun OpusNavHost(
+                         )
+                     },
+                     onDismissError = libraryViewModel::onDismissError,
+-                    modifier = Modifier.testTag("screen_library")
++                    modifier = Modifier
++                        .statusBarsPadding()
++                        .testTag("screen_library")
+                 )
+             }
+             composable(Screen.More.route) {
+                 MoreScreen(
+-                    modifier = Modifier.testTag("screen_more"),
++                    modifier = Modifier
++                        .statusBarsPadding()
++                        .testTag("screen_more"),
+                     onNavigateToSettings = { }
+                 )
+             }
+@@ -270,7 +278,9 @@ fun OpusNavHost(
+                         }
+                     }
+                 },
+-                modifier = Modifier.align(Alignment.BottomCenter)
++                modifier = Modifier
++                    .align(Alignment.BottomCenter)
++                    .navigationBarsPadding()
+             )
+         }
+ 
+diff --git a/design/src/main/java/app/opusreader/design/component/OpusReaderBottomBar.kt b/design/src/main/java/app/opusreader/design/component/OpusReaderBottomBar.kt
+index 59ab956..b5ce944 100644
+--- a/design/src/main/java/app/opusreader/design/component/OpusReaderBottomBar.kt
++++ b/design/src/main/java/app/opusreader/design/component/OpusReaderBottomBar.kt
+@@ -86,28 +86,6 @@ fun OpusReaderBottomBar(
+                 .height(OpusDimensions.ReaderScrubberHeight)
+                 .testTag("reader_scrubber_container")
+         ) {
+-            // Birds-eye grid icon
+-            Box(
+-                modifier = Modifier
+-                    .width(OpusDimensions.ReaderBirdsEyeWidth)
+-                    .height(OpusDimensions.ReaderScrubberHeight)
+-                    .align(Alignment.CenterStart)
+-                    .clickable(
+-                        interactionSource = remember { MutableInteractionSource() },
+-                        indication = null,
+-                        onClick = onThumbnailsClick
+-                    )
+-                    .testTag("reader_thumbnails_button"),
+-                contentAlignment = Alignment.Center
+-            ) {
+-                Icon(
+-                    painter = painterResource(R.drawable.ic_reader_birds_eye),
+-                    contentDescription = "Thumbnails",
+-                    tint = Color(0xFFC5C5C5),
+-                    modifier = Modifier.size(24.dp)
+-                )
+-            }
+-
+             // Scrubber Slider
+             val trackStartX = with(density) { OpusDimensions.ReaderTrackStartX.toPx() }
+             val trackEndX = with(density) { OpusDimensions.ReaderTrackEndX.toPx() }
+@@ -198,6 +176,28 @@ fun OpusReaderBottomBar(
+                         .width(60.dp)
+                 )
+             }
++
++            // Birds-eye grid icon (Z-ordered on top of scrubber slider so click reaches it)
++            Box(
++                modifier = Modifier
++                    .width(OpusDimensions.ReaderBirdsEyeWidth)
++                    .height(OpusDimensions.ReaderScrubberHeight)
++                    .align(Alignment.CenterStart)
++                    .clickable(
++                        interactionSource = remember { MutableInteractionSource() },
++                        indication = null,
++                        onClick = onThumbnailsClick
++                    )
++                    .testTag("reader_thumbnails_button"),
++                contentAlignment = Alignment.Center
++            ) {
++                Icon(
++                    painter = painterResource(R.drawable.ic_reader_birds_eye),
++                    contentDescription = "Thumbnails",
++                    tint = Color(0xFFC5C5C5),
++                    modifier = Modifier.size(24.dp)
++                )
++            }
+         }
+ 
+         Spacer(modifier = Modifier.weight(1f))

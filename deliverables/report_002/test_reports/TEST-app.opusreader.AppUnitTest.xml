@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.opusreader.AppUnitTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-11-20T08:52:10" hostname="mycachy" time="0.164">
+  <properties/>
+  <testcase name="collectionManagement_createAndAssign" classname="app.opusreader.AppUnitTest" time="0.132"/>
+  <testcase name="sheetManagement_openAndDismiss" classname="app.opusreader.AppUnitTest" time="0.002"/>
+  <testcase name="sortMode_sortsAlphabeticallyAndByRecent" classname="app.opusreader.AppUnitTest" time="0.006"/>
+  <testcase name="filterStatus_filtersDownloadedUnreadAndSamples" classname="app.opusreader.AppUnitTest" time="0.004"/>
+  <testcase name="sortMode_authorAzAndZa" classname="app.opusreader.AppUnitTest" time="0.005"/>
+  <testcase name="persistence_survivesViewModelRecreation" classname="app.opusreader.AppUnitTest" time="0.005"/>
+  <testcase name="searchQuery_filtersBooksByTitleAndAuthor" classname="app.opusreader.AppUnitTest" time="0.002"/>
+  <testcase name="bookActions_toggleReadStatusAndDownload" classname="app.opusreader.AppUnitTest" time="0.006"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>
