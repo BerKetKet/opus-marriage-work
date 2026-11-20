@@ -91,4 +91,6 @@ Comparisons were computed with `render.engine/tools/compare_pages.py`:
 - **Near-Identical (>99.9%)**: **1 / 18 (5.6%)**
 - **Line-Shift Drift (85.7% - 92.2%)**: **10 / 18 (55.6%)**
 - **Crashes / Rendering Errors / Artifacts**: **0 / 18 (0.0%)**
-- **Status**: **PASS**. The app displays the exact same Bookerly typography, styling, margins, and rasterization as the Python oracle at calibrated geometries.
+- **Status**: **OPEN (Under Investigation)** per Manager QC Directive.
+  - While typography, Bookerly rasterization, and margin geometries match, middle pages exhibit 8-14% pixel drift due to Knuth-Plass line wrap drift, resulting in an 85 vs 82 page count discrepancy in `exam3_normal`.
+  - Treated as OPEN pending deep engine parity investigation.

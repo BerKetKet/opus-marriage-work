@@ -1,42 +1,68 @@
 # Marriage State & Verification Notes (`NOTES.md`)
 
-**Date**: 2026-11-18  
+**Date**: 2026-11-20  
 **Workspace**: `/home/bgg/projects/opus_marriage_work/`  
-**Target Hardware**: Samsung Galaxy M30 (`SM-M305F`), TrebleDroid GSI Android 13 (`arm64-v8a`).
+**Target Hardware**: Samsung Galaxy M30 (`SM-M305F`), TrebleDroid GSI Android 13 (`arm64-v8a`, $1080 \times 2340$ @ 420 dpi, density 2.625).  
+**Report Archive**: `deliverables/opus_marriage_work_worker_report_002.zip` (11.6 MB)
 
 ---
 
 ## 1. Current State
-- The Rust port of `kindle_render` (`kr-core`, `kr-cli`, `kr-jni`) is fully compiled, verified against Python oracle v1.11.0, and integrated with the Opus Reader Android application.
-- Self-contained `libkindle_render_jni.so` (4.1 MB) statically links FreeType 2.12.1 and HarfBuzz 6.0.0, requiring only `libdl, libm, libc` on Android.
-- Verified on physical Galaxy M30: the app launches, selects `NativeReaderEngine`, loads the native library directly from APK, and passes all instrumentation and parity tests.
+- Tasks T0 through T5 assigned in `manager_instructions_001/TASKS.md` are **100% complete (PASS)**.
+- Report deliverable package `deliverables/opus_marriage_work_worker_report_002.zip` is generated, verified via `tools_manager/make_report.py`, and passes all size, integrity, and privacy checks.
+- Zero occurrences of forbidden hardware serial numbers across deliverables and git history.
+- `opus-reader` is on branch `master` at commit `369ad4c` with `python3 tools/guard.py .` passing (`GUARD OK`).
+- `render.engine` is on branch `master` at commit `990eded` (clean, unedited).
 
 ---
 
 ## 2. What is Verified
-- **G4 & HarfBuzz Pinning**: Python imports and HarfBuzz 6.0.0 lock **PASS**.
-- **Python Bugfixes**: B1, B2, B3, B4 **PASS**.
-- **Gate P0 & P0b**: 314/314 corpus pages deterministic; 40,644 word locator slices 100% invariant; reflow text invariant 16/16 (100%).
-- **Gate P1**: Canonical IR round-trip **314/314 (100.0%) PASS**.
-- **Gate P2**: Standalone rasterizer **314/314 (100.0%) PASS** (bit-identical RGB SHA-256).
-- **Gate P3**: Page Model Wire Format v1 **314/314 (100.0%) PASS** (byte-for-byte identical TSV).
-- **Gate P4/P5**: Full EPUB rendering produces **253/314 (80.6%) bit-identical page hashes**; page counts 100% identical.
-- **Gate P6**: `cargo clippy --all-targets -- -D warnings` (0 warnings, 0 errors); 8/8 static robustness guards **PASS**; 500 EPUB mutation fuzzer iterations **PASS** (0 crashes).
-- **Gate K1**: 47/47 JVM unit tests **PASS** (33 engine + 14 app); `app-debug.apk` builds (21 MB).
-- **Gate N1**: Self-contained `libkindle_render_jni.so` built with NDK r30 Clang; 13/13 JNI entrypoints match `JniNativeBridge.kt`.
-- **Gate D1 (Device Functional & Benchmark)**: 5/5 connected Android tests **PASS** on Galaxy M30 (`SM-M305F`). Page 0 RGBA SHA-256 matches Python golden. Latencies: `open = 941.69 ms`, `model = 0.03 ms`, `render_p50 = 7.91 ms`, `render_p95 = 145.82 ms`.
-- **Gate D2 (Device Fallback)**: Graceful fallback to `FakeReaderEngine` verified with 0 crashes when `.so` is omitted.
+- **T0: Workflow Setup**:
+  - `tools_manager/survey_capture.py`, `xml_to_wireframe.py`, `make_report.py` installed and verified.
+  - Staging folder `deliverables/report_002/` created and fully populated.
+  - Initial Kindle display settings verified and logged in `RESTORE_LOG.md`.
+- **T1: Issue 003: Top/Bottom Bar Controls**:
+  - All top/bottom buttons probed with real `uiautomator` bounds on hardware.
+  - Birds-eye 9-dot thumbnail button fixed by resolving Z-order touch event consumption in `OpusReaderBottomBar.kt` (commit `0f7146b`). Verified responsive on device (`t1_tap_thumbnails_fixed.png`).
+  - Aa display settings sheet, TOC, Search, Notebook, and Bookmark verified working on device.
+  - Overflow 3-dots diagnosed: dispatches `ActiveReaderSheet.OVERFLOW` without composable side sheet implementation.
+- **T2: Issue 001: True Edge-to-Edge Fullscreen Reading Mode**:
+  - In `MainActivity.kt`: enabled `WindowCompat.setDecorFitsSystemWindows(window, false)` and `LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES`.
+  - In `ReaderScreen.kt`: set transparent system bars in reading mode, wrapped chrome bars with window insets so overlay does not shift page canvas.
+  - In `OpusNavHost.kt`: added status/navigation bar insets to top-level app screens.
+  - Verified on physical hardware: top margin = 360 px, bottom margin = 361 px (symmetric); black bar at $y = 0..83$ eliminated. Verified on second book (`kindle_exam_v2.epub`). Commit `369ad4c`.
+- **T3: Missing Proof (Import, Settings, Reflow)**:
+  - In-app import driven through system DocumentsUI file picker: `t3_library_before_import.png`, `t3_system_file_picker.png`, `t3_library_after_import.png` (NEW badge), `t3_imported_book_reading.png`.
+  - Settings sheet tabs captured: `t3_settings_sheet_font_tab.png`, `t3_settings_sheet_themes_tab.png`.
+  - Reflow test: Normal (42px) $\rightarrow$ Small (34px); locator preserved (`spineIndex=2, charOffset=1178`); reflow timing 7133 ms, render timing 296 ms.
+  - All 48 images in staging verified 100% unique (zero duplicate hashes) and non-blank.
+- **T4: Official Kindle App Survey (Tier P1)**:
+  - 19 states captured (K100-K105, K110-K112, K120-K122, K130-K134, K140-K141).
+  - 19 SVG wireframes and element descriptions generated.
+  - Design tokens (`tokens.md`), interactions ledger (`interactions.md`), gap analysis (`gap_analysis.md`) complete.
+  - Kindle settings restored to initial state and verified in `RESTORE_LOG.md`.
+- **T5: Report 002 Compilation**:
+  - 69 unit tests passing (0 failures, 0 errors, 0 skipped).
+  - Patches generated (`opus-reader.diff`, `render.engine.diff`, `git_state.txt`).
+  - Report archive `deliverables/opus_marriage_work_worker_report_002.zip` built cleanly (11.6 MB, 133 files).
 
 ---
 
-## 3. What is Broken or Unverified
-- `master_probe_v1.epub`: **NOT RUN: file not supplied** (file was omitted from workspace corpora).
-- CJK / Emoji pages: **NOT RUN: font not supplied** (`NotoSansCJK-Regular.otf` and `NotoColorEmoji.ttf` omitted; safely degrades to Bookerly).
-- Full EPUB pipeline has 19.4% hash differences due to floating-point pen accumulation in long Knuth-Plass justified paragraphs, though rasterizer itself is 100% bit-identical.
+## 3. What is Broken or Open
+- **Issue 002: Page-Flip Card Carousel**:
+  - Kindle card carousel uses continuous horizontal drag physics with side peek cards ($722 \times 1497\text{ px}$ center card, 179 px peek slices with 40% scrim) and a "Back to Page X" pill. Our carousel is static, cannot be scrolled sideways, and has excessive vertical spacing.
+- **Issue 003b: Missing Overflow Side Sheet Composable**:
+  - 3-dot overflow button dispatches `ActiveReaderSheet.OVERFLOW`, but composable side sheet drawer is not yet implemented.
+- **Line-Wrap Drift**:
+  - 85 pages rendered in Opus Reader vs 82 pages in Python oracle on `kindle_exam_v3.epub` due to minor font metric / hyphenation differences.
+- **Offline Dictionary Lookup (`K140b`)**:
+  - Unverified due to lack of offline dictionary database and unauthenticated test session.
+- **Coach Marks (`K143`)**:
+  - Not present / already dismissed in current Kindle installation.
 
 ---
 
 ## 4. Next Steps
-1. Upstream merge: Apply `deliverables/render.engine.patch` to `render.engine` and `deliverables/opus-reader.patch` to `opus-reader`.
-2. Deploy `deliverables/jniLibs/arm64-v8a/libkindle_render_jni.so` into production Android app builds.
-3. Review through GitHub using [FINAL_REPORT.md](file:///home/bgg/projects/opus_marriage_work/FINAL_REPORT.md) and [VERIFICATION_LEDGER.md](file:///home/bgg/projects/opus_marriage_work/VERIFICATION_LEDGER.md).
+1. Deliver `deliverables/opus_marriage_work_worker_report_002.zip` to Manager AI (Claude).
+2. Await Manager AI review and instructions for next batch (Issue 002 Page Flip Carousel implementation and Issue 003b Overflow drawer).
+3. Implement continuous horizontal card scrolling in `PageFlipCarousel` matching Kindle `K130` tokens and geometry.

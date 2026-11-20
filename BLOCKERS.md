@@ -22,3 +22,7 @@
 - **Fallback Applied**:
   - Recorded `probe` as `NOT RUN: master_probe_v1.epub not supplied in uploaded bundles`.
   - Patched `resolve_font_path` so missing `NotoSansCJK-Regular.otf` and `NotoColorEmoji.ttf` degrade gracefully to `Bookerly-Regular.ttf` without picking up Debian's incompatible CBDT bitmap font, and recorded `exam1` pages `50, 51` and `exam2` page `42` as `NOT RUN: font not supplied`.
+
+## 4. Session 002 Status: No Active Blockers
+- **Status**: Zero active blockers.
+- **Environment**: Host toolchain, Android SDK, Gradle, adb, and connected physical Samsung Galaxy M30 (`SM-M305F`) were all fully functional. Tasks T0–T5 completed without hitting any time-box thresholds or unresolved blocks.

@@ -8,6 +8,15 @@
 
 ## Issue 001: Non-Immersive Fullscreen in Reading Mode (System Bars Visible / Content Pushed Down)
 
+- **Status**: **RESOLVED** (Commit `369ad4c`, Task T2)
+- **Resolution**:
+  - Implemented `WindowCompat.setDecorFitsSystemWindows(window, false)` and `WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES` in `MainActivity.kt`.
+  - Configured transparent status and navigation bars during reading mode in `ReaderScreen.kt`.
+  - Applied `statusBarsPadding()` and `navigationBarsPadding()` to chrome overlay and top-level navigation screens (`HomeScreen`, `LibraryScreen`, `MoreScreen`).
+  - **Empirical Verification on Physical Device**:
+    - Black bar at $y = 0..83\text{ px}$ completely eliminated.
+    - Page 1 cover margin measured at: top 360 px, bottom 361 px (perfect vertical symmetry).
+    - Verified on both `kindle_exam_v3.epub` (`t2_page1_edge_to_edge.png`) and `kindle_exam_v2.epub` (`t2_second_book_page1.png`).
 - **Paired Screenshots**:
   - Our App Cover: [issue_001_cover_page.png](file:///home/bgg/projects/opus_marriage_work/deliverables/diag/issue_001_cover_page.png)
   - Real Kindle Cover: [issue_002_kindle_cover_fullscreen_ref.png](file:///home/bgg/projects/opus_marriage_work/deliverables/diag/issue_002_kindle_cover_fullscreen_ref.png)
@@ -16,12 +25,19 @@
   > "i have enabled layout bounds to be shown in dev settings... that is a page in the real app. and notice the status bar is hidden and the top of the screen is considered part of the reading page which is why the bottom and top marigins are symmetrical. unlike ours which even while hiding the status bar , shifts lower and displays a black bar where the status bar would have been. this is issue 1"
 - **Defect Summary**:
   - In Kindle, reading mode is true edge-to-edge fullscreen extending to the very top edge ($y = 0$). The top of the screen is part of the reading page viewport, yielding vertically symmetrical top and bottom margins.
-  - In Opus Reader, even when the system bars are set to hidden, the viewport is shifted downward and leaves an unrendered black bar in place of the status bar, breaking margin symmetry and pushing the cover page and text downward.
+  - In Opus Reader, even when the system bars were set to hidden, the viewport was shifted downward and left an unrendered black bar in place of the status bar, breaking margin symmetry and pushing the cover page and text downward.
 
 ---
 
 ## Issue 002: Page Flip Carousel Differences (Cannot Scroll, Page Sizing & Excessive Vertical Spacing)
 
+- **Status**: **OPEN** (Prioritized for next instruction batch)
+- **Survey Reference**: `K130` (`wireframes/K130.svg`, `wireframes/K130.md`, `tokens.md`)
+- **Key Findings from Survey**:
+  - Kindle card dimensions: Central card 722 x 1497 px (275 x 570 dp, aspect ~0.482).
+  - Left & Right peek cards: 179 px visible slice, 40% scrim.
+  - "Back to X" floating pill affordance at `[40, 1867][213, 1963]` restoring previous position.
+  - Continuous horizontal drag and snapping physics.
 - **Paired Screenshots**:
   - Real Kindle Reference: [issue_002_kindle_page_flip_carousel.png](file:///home/bgg/projects/opus_marriage_work/deliverables/diag/issue_002_kindle_page_flip_carousel.png)
   - Our App (Chrome Active / Page Flip): [issue_002_our_app_chrome_page_bounds.png](file:///home/bgg/projects/opus_marriage_work/deliverables/diag/issue_002_our_app_chrome_page_bounds.png)
@@ -36,6 +52,12 @@
 
 ## Issue 003: Unresponsive Top Action Buttons & Visual Divergence from Kindle UI
 
+- **Status**: **PARTIALLY RESOLVED / DIAGNOSED** (Commit `0f7146b`, Task T1)
+- **Diagnosis & Fix Details**:
+  - **Birds-Eye Thumbnails Button**: Was dead due to Z-order touch event consumption by Scrubber Box covering `x = 0..137 px`. Fixed by reordering button above slider in `OpusReaderBottomBar.kt`. Verified working on device (`t1_tap_thumbnails_fixed.png`).
+  - **Display Settings (Aa)**: Probed and confirmed working on device (`t1_tap_aa.png`, `t3_settings_sheet_font_tab.png`).
+  - **TOC, Search, Notebook, Bookmark**: Probed with real `uiautomator` bounds and verified working (`t1_tap_contents.png`, `t1_tap_search.png`, `t1_tap_notebook.png`, `t1_tap_bookmark.png`).
+  - **Overflow (3-dots)**: Tapping dispatches `ActiveReaderSheet.OVERFLOW`, but no composable side sheet menu exists in `ReaderScreen.kt`. Documented as missing design to be implemented based on Kindle `K112` survey.
 - **Referenced Screenshot**:
   - Our App (Chrome Active): [issue_002_our_app_chrome_page_bounds.png](file:///home/bgg/projects/opus_marriage_work/deliverables/diag/issue_002_our_app_chrome_page_bounds.png)
 - **User Description**:

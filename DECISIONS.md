@@ -49,6 +49,18 @@ Every decision taken during this session is logged below with its rationale and 
 - **Decision**: Update execution tier from Tier E1 / K-c to full Tier 1. Host has Cargo 1.98.0, Rustc 1.98.0 with `aarch64-linux-android` target, OpenJDK 21, Android SDK/NDK r30, Docker with `kr-parity` image (Debian Bookworm, HarfBuzz 6.0.0, FreeType 2.12.1), and an active Samsung Galaxy M30 (`SM-M305F`, running TrebleDroid Android 13 GSI) phone on adb (`<device>`).
 - **Reason & Evidence**: Replaced previous session's unexecuted assumptions with actual builds and dynamic test execution.
 
+## D9. Compose Touch Event Hierarchy & Scrubber Z-Order (Task T1)
+- **Decision**: Place the 9-dot thumbnail button after the scrubber slider Box in the Compose `Box` Z-order inside `OpusReaderBottomBar.kt`.
+- **Reason & Evidence**: In Jetpack Compose, sibling children in a `Box` receive hit tests in reverse declaration order (topmost first). Placing the `fillMaxWidth()` scrubber slider after the thumbnail button covered `x = 0..137 px` and intercepted all tap events. Reordering restored responsive clicks on the 9-dot button without altering geometry.
+
+## D10. Android Cutout Mode & True Edge-to-Edge Window Setup (Task T2)
+- **Decision**: Set `WindowCompat.setDecorFitsSystemWindows(window, false)` and `window.attributes.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES` in `MainActivity.onCreate()`, set transparent system bars in `ReaderScreen.kt` reading mode, and apply `statusBarsPadding()` and `navigationBarsPadding()` to top-level app screens (`HomeScreen`, `LibraryScreen`, `MoreScreen`) and chrome overlay containers.
+- **Reason & Evidence**: Android letterboxes display cutout notches in portrait unless `LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES` and `setDecorFitsSystemWindows(false)` are both explicitly enabled. Verified on physical device: eliminated the 83px black bar and restored 360px symmetrical top and bottom margins on the 1080x2340 display canvas.
+
+## D11. Parity Status Classification (QC Directive)
+- **Decision**: Formally record parity in `PARITY_APP.md` as `OPEN (Under Investigation)` rather than `PASS`.
+- **Reason & Evidence**: Follows manager instructions 001. While cover, title, and terminal pages achieve 100% bit-identity and typography matches, middle justified paragraphs display 8-14% pixel drift due to floating-point pen accumulation in Knuth-Plass line breaks, yielding an 85 vs 82 page count discrepancy in `exam3_normal`.
+
 ## D9. `lxml` Dependency in `kr-parity` Docker Image
 - **Decision**: Install `lxml` in `kr-parity` image.
 - **Reason & Evidence**: `kindle_render/epub.py:203` parses EPUB XML files using `BeautifulSoup(..., "xml")`. Without `lxml`, BeautifulSoup raises `bs4.exceptions.FeatureNotFound: Couldn't find a tree builder with the features you requested: xml`.
