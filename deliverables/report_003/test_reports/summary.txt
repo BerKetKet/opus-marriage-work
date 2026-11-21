@@ -1,0 +1,20 @@
+Unit Test Execution Summary (Fresh run --rerun-tasks)
+======================================================
+Tests executed : 69
+Failures       : 0
+Errors         : 0
+Skipped        : 0
+Status         : PASS
+
+Test Suites:
+- app.opusreader.AppUnitTest: tests=8, failures=0, errors=0, skipped=0, time=0.165s
+- app.opusreader.data.BookEntityTest: tests=6, failures=0, errors=0, skipped=0, time=0.23s
+- app.opusreader.data.EpubParserTest: tests=1, failures=0, errors=0, skipped=0, time=0.03s
+- app.opusreader.design.DesignTest: tests=5, failures=0, errors=0, skipped=0, time=0.119s
+- app.opusreader.engine.FakeReaderEngineTest: tests=10, failures=0, errors=0, skipped=0, time=1.562s
+- app.opusreader.engine.LocatorTest: tests=1, failures=0, errors=0, skipped=0, time=0.001s
+- app.opusreader.engine.NativeReaderEngineTest: tests=15, failures=0, errors=0, skipped=0, time=0.675s
+- app.opusreader.engine.PageBitmapLruCacheTest: tests=5, failures=0, errors=0, skipped=0, time=0.009s
+- app.opusreader.engine.PageModelCodecTest: tests=7, failures=0, errors=0, skipped=0, time=0.086s
+- app.opusreader.feature.library.LibraryViewModelTest: tests=3, failures=0, errors=0, skipped=0, time=0.016s
+- app.opusreader.feature.reader.ReaderViewModelTest: tests=8, failures=0, errors=0, skipped=0, time=0.046s

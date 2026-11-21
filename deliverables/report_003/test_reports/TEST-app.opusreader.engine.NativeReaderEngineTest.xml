@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.opusreader.engine.NativeReaderEngineTest" tests="15" skipped="0" failures="0" errors="0" timestamp="2026-11-21T07:35:30" hostname="mycachy" time="0.675">
+  <properties/>
+  <testcase name="reflowRoundTrip_sameLocatorLandsOnPageContainingSameWord" classname="app.opusreader.engine.NativeReaderEngineTest" time="0.264"/>
+  <testcase name="progressMonotonicity_and_pageAtProgressBoundaries" classname="app.opusreader.engine.NativeReaderEngineTest" time="0.04"/>
+  <testcase name="scrubberCommitRegression_multiSpineOffsetDoesNotClampToSpineZero" classname="app.opusreader.engine.NativeReaderEngineTest" time="0.036"/>
+  <testcase name="fallbackSelection_usesFakeWhenBridgeUnavailableOrSelfTestFails" classname="app.opusreader.engine.NativeReaderEngineTest" time="0.001"/>
+  <testcase name="searchHits_mapDirectlyToWordsOnTargetPage" classname="app.opusreader.engine.NativeReaderEngineTest" time="0.007"/>
+  <testcase name="handleLifecycle_openAndClose200Times_leaksZeroHandles" classname="app.opusreader.engine.NativeReaderEngineTest" time="0.28"/>
+  <testcase name="errorHandling_bridgeThrowsOrReturnsGarbage_throwsEngineExceptionAndCleansUpHandle" classname="app.opusreader.engine.NativeReaderEngineTest" time="0.008"/>
+  <testcase name="search_findsOccurrencesAcrossSpines" classname="app.opusreader.engine.NativeReaderEngineTest" time="0.004"/>
+  <testcase name="open_validEpub_returnsAccurateBookInfoAndToc" classname="app.opusreader.engine.NativeReaderEngineTest" time="0.004"/>
+  <testcase name="rectsFor_and_textFor_returnMatchingWordsForLocatorRange" classname="app.opusreader.engine.NativeReaderEngineTest" time="0.003"/>
+  <testcase name="locatorPersistenceAndRestoration_survivesEngineRecreation" classname="app.opusreader.engine.NativeReaderEngineTest" time="0.005"/>
+  <testcase name="pageAtProgress_resolvesSecondSpineCorrectly" classname="app.opusreader.engine.NativeReaderEngineTest" time="0.004"/>
+  <testcase name="progress_calculatesCumulativePosition" classname="app.opusreader.engine.NativeReaderEngineTest" time="0.006"/>
+  <testcase name="fallbackHandling_gracefullyPaginatesMissingOrNonExistentFile" classname="app.opusreader.engine.NativeReaderEngineTest" time="0.004"/>
+  <testcase name="pageNavigation_nextAndPrevious_traversesBookSeamlessly" classname="app.opusreader.engine.NativeReaderEngineTest" time="0.004"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

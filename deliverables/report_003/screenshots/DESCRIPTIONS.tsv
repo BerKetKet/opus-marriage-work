@@ -1,0 +1,41 @@
+t1_middle_p20_black.png	Kindle Exam v3 reading view at page 20 in Black theme with chrome hidden
+t1_middle_p20_white.png	Kindle Exam v3 reading view at page 20 in White theme with chrome hidden
+t1_middle_p40_black.png	Kindle Exam v3 reading view at page 40 in Black theme with chrome hidden
+t1_middle_p40_white.png	Kindle Exam v3 reading view at page 40 in White theme with chrome hidden
+t1_middle_p40_white_chrome.png	Kindle Exam v3 reading view at page 40 in White theme with reader chrome controls shown
+t1_middle_p60_black.png	Kindle Exam v3 reading view at page 60 in Black theme with chrome hidden
+t1_middle_p60_white.png	Kindle Exam v3 reading view at page 60 in White theme with chrome hidden
+t2_library_list_before.png	Opus Reader Library in List view displaying existing books before new EPUB import
+t2_system_file_picker.png	Android system Storage Access Framework document picker selecting kindle_exam_v1.epub
+t2_library_list_after.png	Opus Reader Library in List view after successful import showing Kindle Exam v1 title
+t2_imported_book_reading.png	Reader screen rendering first text page of imported kindle_exam_v1.epub
+t2_imported_book_reopened.png	Reader screen reopened to saved reading locator after force-stopping application
+t2_import_duplicate.png	User notification message displayed when attempting to import a book already in library
+t2_import_corrupt_error.png	User error message displayed when attempting to import a truncated or corrupt EPUB file
+t3_opus_k102_before_tap.png	Reading view at page 2 before right-margin tap page turn gesture
+t3_opus_k102_after_tap.png	Reading view at page 3 after right-margin tap page turn gesture
+t3_opus_k103_before_swipe.png	Reading view at page 3 before horizontal swipe gesture
+t3_opus_k103_after_swipe.png	Reading view at page 4 after horizontal swipe gesture
+t3_opus_k105_footer.png	Reading view with chrome hidden verifying absence of reading footer in reading mode
+t3_opus_k140_selection.png	Reading view with text word selected displaying handles and floating action toolbar
+t3_opus_k141_highlight.png	Reading view displaying persistent yellow highlight rectangle rendered beneath text
+t3_opus_k142_dictionary.png	Text selection action menu showing Note Search Copy Share and missing dictionary card
+K100.png	Reading view, chrome hidden
+K101.png	Reading view, chrome shown
+K102.png	Reader tap zones (left page turn)
+K103.png	Reader page turn by swipe
+K104.png	First page (cover) view
+K105.png	Reading progress footer cycle
+K110.png	Top bar controls in Kindle
+K111.png	Bookmark added indicator
+K112.png	Overflow side sheet menu
+K120.png	Aa Display settings sheet Font tab
+K121.png	Aa Display settings sheet Layout tab and themes
+K122.png	Aa Display settings sheet Themes tab
+K130.png	Kindle page-flip carousel with cards and back affordance
+K131.png	Kindle 9-dot thumbnail grid view
+K132.png	Kindle Table of Contents screen
+K133.png	Notebook bookmarks and annotations list
+K134.png	In-book search screen
+K140.png	Kindle text selection toolbar and dictionary card
+K141.png	Highlight color selection and annotation popup

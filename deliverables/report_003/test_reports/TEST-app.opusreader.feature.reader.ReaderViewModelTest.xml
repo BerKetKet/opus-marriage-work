@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.opusreader.feature.reader.ReaderViewModelTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-11-21T07:35:39" hostname="mycachy" time="0.046">
+  <properties/>
+  <testcase name="loadBook_populatesInitialState_andLoadsPageAtSavedLocator" classname="app.opusreader.feature.reader.ReaderViewModelTest" time="0.009"/>
+  <testcase name="nextAndPreviousPage_transitionsPages_andPersistsProgress" classname="app.opusreader.feature.reader.ReaderViewModelTest" time="0.003"/>
+  <testcase name="toggleChrome_updatesVisibilityState" classname="app.opusreader.feature.reader.ReaderViewModelTest" time="0.002"/>
+  <testcase name="toggleBookmark_addsAndRemovesBookmarkEntity" classname="app.opusreader.feature.reader.ReaderViewModelTest" time="0.009"/>
+  <testcase name="updateDisplaySettings_changesThemeAndPersists" classname="app.opusreader.feature.reader.ReaderViewModelTest" time="0.003"/>
+  <testcase name="scrubberChangeAndCommit_updatesLocationAndJumpsPage" classname="app.opusreader.feature.reader.ReaderViewModelTest" time="0.004"/>
+  <testcase name="updateDisplaySettings_reflowsAndPreservesLocator" classname="app.opusreader.feature.reader.ReaderViewModelTest" time="0.012"/>
+  <testcase name="jumpToToc_navigatesToChapterLocator_andDismissesSheet" classname="app.opusreader.feature.reader.ReaderViewModelTest" time="0.002"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.opusreader.data.EpubParserTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-11-21T07:35:25" hostname="mycachy" time="0.03">
+  <properties/>
+  <testcase name="parseKindleExamV3_succeedsAndExtractsSpinesAndToc" classname="app.opusreader.data.EpubParserTest" time="0.03"/>
+  <system-out><![CDATA[Parsed book title: Kindle Render Exam v3, author: Exam
+Spine count: 15
+TOC count: 14
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

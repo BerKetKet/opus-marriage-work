@@ -1,0 +1,132 @@
+diff --git a/engine/src/androidTest/java/app/opusreader/engine/NativeReaderEngineParityTest.kt b/engine/src/androidTest/java/app/opusreader/engine/NativeReaderEngineParityTest.kt
+index ab93fbe..e5fb5ce 100644
+--- a/engine/src/androidTest/java/app/opusreader/engine/NativeReaderEngineParityTest.kt
++++ b/engine/src/androidTest/java/app/opusreader/engine/NativeReaderEngineParityTest.kt
+@@ -241,54 +241,88 @@ class NativeReaderEngineParityTest {
+         val outDir = File(targetContext.cacheDir, "parity_dump")
+         outDir.mkdirs()
+ 
++        val sdcardDir = targetContext.getExternalFilesDir(null) ?: targetContext.filesDir
++
+         val theme = PageTheme(textColor = Color.BLACK, backgroundColor = Color.WHITE)
+ 
+-        // 1. exam3_normal (geometry index 3: 45px / 68 pitch)
+-        val engineNormal = NativeReaderEngine(bridge = JniNativeBridge, assets = assets)
+-        try {
+-            engineNormal.open(
+-                BookSource(id = "exam3_normal", filePath = epubFile.absolutePath),
+-                ReaderSettings(kindleGeometryIndex = 3)
+-            )
+-            val normalIndices = listOf(0, 1, 2, 10, 20, 30, 40, 50, engineNormal.totalPages - 1)
+-            for (pIdx in normalIndices) {
+-                val page = engineNormal.pageByIndex(pIdx) ?: continue
+-                val bmp = Bitmap.createBitmap(1080, 2340, Bitmap.Config.ARGB_8888)
+-                val canvas = Canvas(bmp)
+-                engineNormal.draw(page, canvas, theme)
+-                val outFile = File(outDir, "engine_normal_page_%03d.png".format(pIdx))
+-                outFile.outputStream().use { out ->
+-                    bmp.compress(Bitmap.CompressFormat.PNG, 100, out)
++        val presets = listOf(
++            Triple("small", 0, "exam3_small"),
++            Triple("p42", 1, "exam3_p42"),
++            Triple("normal", 3, "exam3_normal")
++        )
++
++        for ((presetTag, geomIdx, presetName) in presets) {
++            val engine = NativeReaderEngine(bridge = JniNativeBridge, assets = assets)
++            try {
++                engine.open(
++                    BookSource(id = presetName, filePath = epubFile.absolutePath),
++                    ReaderSettings(kindleGeometryIndex = geomIdx)
++                )
++                val totalPages = engine.totalPages
++                android.util.Log.i("PARITY_DUMP", "Preset $presetTag totalPages=$totalPages")
++
++                val sb = java.lang.StringBuilder()
++                val geom = engine.lastResolvedGeometry
++                if (geom != null) {
++                    sb.append("CONFIG\tsize26=").append(geom.size26)
++                        .append("\tpitch=").append(geom.pitchPx)
++                        .append("\tx0=").append(geom.x0)
++                        .append("\tright=").append(geom.right)
++                        .append("\ttop=").append(geom.top)
++                        .append("\tpage_bottom=").append(geom.pageBottom)
++                        .append("\tscreen_w=").append(geom.screenW)
++                        .append("\tscreen_h=").append(geom.screenH)
++                        .append("\tboldness=").append(geom.boldnessLevel)
++                        .append("\tjustify=").append(if (geom.justify) 1 else 0)
++                        .append("\thyphenate=").append(if (geom.hyphenate) 1 else 0)
++                        .append("\n")
+                 }
+-                bmp.recycle()
+-                android.util.Log.i("PARITY_DUMP", "Saved normal page $pIdx to ${outFile.absolutePath}")
+-            }
+-        } finally {
+-            engineNormal.close()
+-        }
+ 
+-        // 2. exam3_small (geometry index 0: 34px / 51 pitch)
+-        val engineSmall = NativeReaderEngine(bridge = JniNativeBridge, assets = assets)
+-        try {
+-            engineSmall.open(
+-                BookSource(id = "exam3_small", filePath = epubFile.absolutePath),
+-                ReaderSettings(kindleGeometryIndex = 0)
+-            )
+-            val smallIndices = listOf(0, 1, 2, 10, 20, 30, 40, 50, engineSmall.totalPages - 1)
+-            for (pIdx in smallIndices) {
+-                val page = engineSmall.pageByIndex(pIdx) ?: continue
++                for (fontName in assets.availableFonts()) {
++                    val bytes = assets.fontBytes(fontName)
++                    if (bytes != null && bytes.isNotEmpty()) {
++                        sb.append("ASSET\t").append(fontName)
++                            .append("\tbytes=").append(bytes.size)
++                            .append("\tsha256=").append(sha256Hex(bytes).take(12))
++                            .append("\n")
++                    }
++                }
++                for (lang in assets.availableHyphenationLangs()) {
++                    val bytes = assets.hyphenationBytes(lang)
++                    if (bytes != null && bytes.isNotEmpty()) {
++                        sb.append("ASSET\thyph_").append(lang)
++                            .append("\tbytes=").append(bytes.size)
++                            .append("\tsha256=").append(sha256Hex(bytes).take(12))
++                            .append("\n")
++                    }
++                }
++
++                val byteBuf = ByteBuffer.allocate(1080 * 2340 * 4)
+                 val bmp = Bitmap.createBitmap(1080, 2340, Bitmap.Config.ARGB_8888)
+                 val canvas = Canvas(bmp)
+-                engineSmall.draw(page, canvas, theme)
+-                val outFile = File(outDir, "engine_small_page_%03d.png".format(pIdx))
+-                outFile.outputStream().use { out ->
+-                    bmp.compress(Bitmap.CompressFormat.PNG, 100, out)
++
++                for (pIdx in 0 until totalPages) {
++                    val page = engine.pageByIndex(pIdx) ?: continue
++                    byteBuf.rewind()
++                    engine.draw(page, canvas, theme)
++                    bmp.copyPixelsToBuffer(byteBuf)
++                    val rgbSha = sha256Hex(byteBuf.array())
++                    val layoutWire = PageModelCodec.formatPageModel(DecodedPageModel(pIdx, 1080, 2340, page))
++                    val layoutSha = sha256Hex(layoutWire.toByteArray())
++                    val lineCount = page.words.map { it.rect.top }.distinct().size
++                    sb.append(pIdx + 1).append('\t')
++                        .append(layoutSha).append('\t')
++                        .append(rgbSha).append('\t')
++                        .append(lineCount).append('\n')
+                 }
+                 bmp.recycle()
+-                android.util.Log.i("PARITY_DUMP", "Saved small page $pIdx to ${outFile.absolutePath}")
++
++                val dumpFile = File(sdcardDir, "engine_dump_${presetTag}.txt")
++                dumpFile.writeText(sb.toString())
++                android.util.Log.i("PARITY_DUMP", "Saved $presetTag ($totalPages pages) to ${dumpFile.absolutePath}")
++            } finally {
++                engine.close()
+             }
+-        } finally {
+-            engineSmall.close()
+         }
+     }
+ 

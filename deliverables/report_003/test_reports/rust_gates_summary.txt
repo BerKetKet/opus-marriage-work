@@ -1,0 +1,12 @@
+Container Rust Parity Verification Gates
+=========================================
+Gate P0b: Layout Text Continuity & IR Validation (381 pages checked, 50966 words checked, 0 violations): PASS
+Gate P1: IR Round-Trip Verification (314/314 byte-identical canonical JSON pages, 100.0%): PASS
+Gate P2: Rasterizer Verification (Python IR -> Rust Rasterizer) (314/314 pixel-identical pages, 100.0%): PASS
+Gate P3: Text Layer & Page Model Verification (Wire Format v1) (314/314 byte-identical page models, 100.0%): PASS
+
+Rust Unit Tests (cargo test --manifest-path rust/Cargo.toml):
+- kr-cli: 0 failed
+- kr-core: 3 passed, 0 failed
+- kr-jni: 1 passed (test_handle_lifecycle_200_iterations_no_leak), 0 failed
+Total: 4 passed, 0 failed (PASS)

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.opusreader.data.BookEntityTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-21T07:35:25" hostname="mycachy" time="0.23">
+  <properties/>
+  <testcase name="validEpub_parsesMetadataSpineAndTocCorrectly" classname="app.opusreader.data.BookEntityTest" time="0.207"/>
+  <testcase name="malformedEpub_missingContainer_throwsGracefully" classname="app.opusreader.data.BookEntityTest" time="0.002"/>
+  <testcase name="malformedEpub_corruptZip_throwsGracefully" classname="app.opusreader.data.BookEntityTest" time="0.001"/>
+  <testcase name="annotationEntity_creationAndDefaults" classname="app.opusreader.data.BookEntityTest" time="0.002"/>
+  <testcase name="malformedEpub_missingOpf_throwsGracefully" classname="app.opusreader.data.BookEntityTest" time="0.004"/>
+  <testcase name="minimalEpub_parsesCleanlyWithoutCoverOrNcx" classname="app.opusreader.data.BookEntityTest" time="0.01"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

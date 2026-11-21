@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="app.opusreader.engine.PageBitmapLruCacheTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-21T07:35:31" hostname="mycachy" time="0.009">
+  <properties/>
+  <testcase name="reusablePool_receivesEvictedItemsUpToPoolLimit_excessRecycled" classname="app.opusreader.engine.PageBitmapLruCacheTest" time="0.003"/>
+  <testcase name="boundRespected_maxBytes_evictsWhenByteBudgetExceeded" classname="app.opusreader.engine.PageBitmapLruCacheTest" time="0.002"/>
+  <testcase name="clear_recyclesAllCachedAndPooledItems_leavesZeroLeaks" classname="app.opusreader.engine.PageBitmapLruCacheTest" time="0.002"/>
+  <testcase name="evictionOrder_leastRecentlyUsedEvictedFirst" classname="app.opusreader.engine.PageBitmapLruCacheTest" time="0.001"/>
+  <testcase name="boundRespected_maxCount_doesNotExceedLimit" classname="app.opusreader.engine.PageBitmapLruCacheTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

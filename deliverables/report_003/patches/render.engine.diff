@@ -1,0 +1,463 @@
+diff --git a/rust/kr-cli/src/main.rs b/rust/kr-cli/src/main.rs
+index a280f39..fa31469 100644
+--- a/rust/kr-cli/src/main.rs
++++ b/rust/kr-cli/src/main.rs
+@@ -19,14 +19,19 @@ use kr_core::raster::Rasterizer;
+ use kr_core::text_layer::{build_document_text_layer, validate_document_text_layer, write_text_layer_files};
+ 
+ // py: cli.py:7 fn _add_epub_args
+-pub fn _add_epub_args(args: &[String], cfg: &mut Config) -> (String, String, usize, bool) {
++pub fn _add_epub_args(args: &[String], cfg: &mut Config) -> (String, String, usize, bool, bool) {
+     let mut epub = String::new();
+     let mut outdir = String::new();
+     let mut pages = 10usize;
+     let mut text_layer = false;
++    let mut print_config = false;
+     let mut i = 0usize;
+     while i < args.len() {
+         match args[i].as_str() {
++            "--print-config" => {
++                print_config = true;
++                i += 1;
++            }
+             "--pages" if i + 1 < args.len() => {
+                 pages = args[i + 1].parse().unwrap_or(10);
+                 i += 2;
+@@ -145,7 +150,7 @@ pub fn _add_epub_args(args: &[String], cfg: &mut Config) -> (String, String, usi
+             }
+         }
+     }
+-    (epub, outdir, pages, text_layer)
++    (epub, outdir, pages, text_layer, print_config)
+ }
+ 
+ fn sha256_hex(bytes: &[u8]) -> String {
+@@ -370,7 +375,23 @@ fn main() {
+         }
+         "layout" | "render-book" => {
+             let mut cfg = Config::new("kindle_render/fonts", true, 0);
+-            let (epub, outdir, max_pages, _) = _add_epub_args(rest, &mut cfg);
++            let (epub, outdir, max_pages, _, print_config) = _add_epub_args(rest, &mut cfg);
++            if print_config {
++                println!(
++                    "CONFIG\tsize26={}\tpitch={}\tx0={}\tright={}\ttop={}\tpage_bottom={}\tscreen_w={}\tscreen_h={}\tboldness={}\tjustify={}\thyphenate={}",
++                    cfg.size26,
++                    cfg.pitch,
++                    cfg.x0,
++                    cfg.right,
++                    cfg.top,
++                    cfg.page_bottom,
++                    cfg.screen_w,
++                    cfg.screen_h,
++                    cfg.boldness_level,
++                    if cfg.justify { 1 } else { 0 },
++                    if cfg.hyphenate { 1 } else { 0 }
++                );
++            }
+             let blocks = load_epub(Path::new(&epub), &cfg).expect("Failed loading EPUB");
+             let mut fam = Family::new(cfg.clone());
+             let ir_doc = layout_blocks_to_ir(&blocks, &cfg, &mut fam, Some(max_pages));
+@@ -380,6 +401,12 @@ fn main() {
+             }
+             for p in &ir_doc.pages {
+                 let l_sha = p.layout_sha256();
++                if !outdir.is_empty() {
++                    let p_out = Path::new(&outdir).join(format!("page_{:03}.ir.json", p.page_number));
++                    if let Ok(s) = serde_json::to_string_pretty(&p.to_dict()) {
++                        fs::write(&p_out, s).ok();
++                    }
++                }
+                 if cmd == "render-book" {
+                     let rgb = rast.rasterize_page(p);
+                     let r_sha = sha256_hex(&rgb);
+@@ -392,7 +419,7 @@ fn main() {
+         }
+         "epub-blocks" => {
+             let mut cfg = Config::new("kindle_render/fonts", true, 0);
+-            let (epub, _, _, _) = _add_epub_args(rest, &mut cfg);
++            let (epub, _, _, _, _) = _add_epub_args(rest, &mut cfg);
+             let blocks = load_epub(Path::new(&epub), &cfg).expect("Failed loading EPUB");
+             println!("blocks_count={}", blocks.len());
+             for (idx, b) in blocks.iter().enumerate() {
+@@ -422,7 +449,7 @@ fn main() {
+         }
+         "epub" | "text" => {
+             let mut cfg = Config::new("kindle_render/fonts", true, 0);
+-            let (epub, outdir, pages, want_tl) = _add_epub_args(rest, &mut cfg);
++            let (epub, outdir, pages, want_tl, _) = _add_epub_args(rest, &mut cfg);
+             let blocks: Vec<Block> = load_epub(Path::new(&epub), &cfg).expect("Failed loading EPUB");
+             let mut fam = Family::new(cfg.clone());
+             if cmd == "text" {
+diff --git a/tools/profiles.json b/tools/profiles.json
+index 2859b03..dbebe27 100644
+--- a/tools/profiles.json
++++ b/tools/profiles.json
+@@ -152,6 +152,21 @@
+         "top": 168,
+         "page_bottom": 2203
+       }
++    },
++    "exam3_p42": {
++      "epub": "kindle_exam_v3.epub",
++      "captures_zip": "exam_v3_screenshots.zip",
++      "max_pages": 100,
++      "ignore_captures": [],
++      "valid_capture_ranges": [],
++      "config": {
++        "size26": 2688,
++        "x0": 79,
++        "right": 1001,
++        "pitch": 57,
++        "top": 168,
++        "page_bottom": 2203
++      }
+     }
+   }
+-}
++}
+\ No newline at end of file
+diff --git a/tools/reference_samples/reference_manifest.json b/tools/reference_samples/reference_manifest.json
+index f8d4ccf..0808eb3 100644
+--- a/tools/reference_samples/reference_manifest.json
++++ b/tools/reference_samples/reference_manifest.json
+@@ -44,12 +44,12 @@
+         ]
+       },
+       "timings_ms": {
+-        "epub_parse_ms": 117.52,
+-        "layout_ir_ms": 22429.08,
+-        "open_total_ms": 22546.6,
+-        "page_model_build_ms": 396.3,
+-        "render_p50_ms": 71.99,
+-        "render_p95_ms": 166.05
++        "epub_parse_ms": 155.37,
++        "layout_ir_ms": 26185.15,
++        "open_total_ms": 26340.51,
++        "page_model_build_ms": 488.82,
++        "render_p50_ms": 65.89,
++        "render_p95_ms": 84.55
+       },
+       "layout_pages_sha256": {
+         "1": "0cf27425e9d379e3a973f76cbf9e78abc57b7a5d760c6b32781e00516b0b4ba8",
+@@ -296,12 +296,12 @@
+         ]
+       },
+       "timings_ms": {
+-        "epub_parse_ms": 100.83,
+-        "layout_ir_ms": 29013.09,
+-        "open_total_ms": 29113.93,
+-        "page_model_build_ms": 400.44,
+-        "render_p50_ms": 66.69,
+-        "render_p95_ms": 89.25
++        "epub_parse_ms": 126.57,
++        "layout_ir_ms": 34257.59,
++        "open_total_ms": 34384.15,
++        "page_model_build_ms": 501.53,
++        "render_p50_ms": 63.15,
++        "render_p95_ms": 76.94
+       },
+       "layout_pages_sha256": {
+         "1": "ff0f8e712f44636608440d9eecc17c46736f9a059a277cc2d753135209967a86",
+@@ -525,12 +525,12 @@
+       "p0b_violation_details": [],
+       "missing_font_pages": {},
+       "timings_ms": {
+-        "epub_parse_ms": 118.41,
+-        "layout_ir_ms": 22821.31,
+-        "open_total_ms": 22939.71,
+-        "page_model_build_ms": 546.58,
+-        "render_p50_ms": 65.25,
+-        "render_p95_ms": 89.02
++        "epub_parse_ms": 205.49,
++        "layout_ir_ms": 26565.37,
++        "open_total_ms": 26770.86,
++        "page_model_build_ms": 652.46,
++        "render_p50_ms": 64.35,
++        "render_p95_ms": 71.38
+       },
+       "layout_pages_sha256": {
+         "1": "0bf240889d64e5bd06d76079f15c19dacbe5692548fcd67609c93941104c45a4",
+@@ -808,12 +808,12 @@
+       "p0b_violation_details": [],
+       "missing_font_pages": {},
+       "timings_ms": {
+-        "epub_parse_ms": 120.27,
+-        "layout_ir_ms": 23216.8,
+-        "open_total_ms": 23337.07,
+-        "page_model_build_ms": 492.49,
+-        "render_p50_ms": 61.81,
+-        "render_p95_ms": 76.35
++        "epub_parse_ms": 152.14,
++        "layout_ir_ms": 27140.54,
++        "open_total_ms": 27292.68,
++        "page_model_build_ms": 603.15,
++        "render_p50_ms": 71.38,
++        "render_p95_ms": 84.26
+       },
+       "layout_pages_sha256": {
+         "1": "0bf240889d64e5bd06d76079f15c19dacbe5692548fcd67609c93941104c45a4",
+@@ -1007,12 +1007,12 @@
+       "p0b_violation_details": [],
+       "missing_font_pages": {},
+       "timings_ms": {
+-        "epub_parse_ms": 183.89,
+-        "layout_ir_ms": 15283.54,
+-        "open_total_ms": 15467.43,
+-        "page_model_build_ms": 1335.39,
+-        "render_p50_ms": 54.41,
+-        "render_p95_ms": 99.46
++        "epub_parse_ms": 236.84,
++        "layout_ir_ms": 18049.53,
++        "open_total_ms": 18286.36,
++        "page_model_build_ms": 1469.4,
++        "render_p50_ms": 53.16,
++        "render_p95_ms": 65.21
+       },
+       "layout_pages_sha256": {
+         "1": "8d48d979e23a3caddd1d241f11f176ec209fde5dea91ad3bb8173c2223c7a48a",
+@@ -1153,6 +1153,244 @@
+         "44": "b564406353944467d81f1370e50112da9b53cf9836dd54fd553a8c4058ddbaf4"
+       },
+       "book_model_sha256": "23b6906dfdc2bbe02937ed16ef814d5cd6a13b12d6411ab7739773be96fcce07"
++    },
++    "exam3_p42": {
++      "corpus": "exam3_p42",
++      "epub": "kindle_exam_v3.epub",
++      "config": {
++        "size26": 2688,
++        "x0": 79,
++        "right": 1001,
++        "pitch": 57,
++        "top": 168,
++        "page_bottom": 2203
++      },
++      "page_count": 67,
++      "block_count": 687,
++      "spine_count": 16,
++      "total_words": 10445,
++      "ir_validation_errors": 0,
++      "text_layer_valid": true,
++      "p0b_pages_checked": 67,
++      "p0b_violations": 0,
++      "p0b_violation_details": [],
++      "missing_font_pages": {},
++      "timings_ms": {
++        "epub_parse_ms": 149.41,
++        "layout_ir_ms": 25191.61,
++        "open_total_ms": 25341.02,
++        "page_model_build_ms": 639.92,
++        "render_p50_ms": 69.75,
++        "render_p95_ms": 77.21
++      },
++      "layout_pages_sha256": {
++        "1": "0bf240889d64e5bd06d76079f15c19dacbe5692548fcd67609c93941104c45a4",
++        "2": "26ccc80bac1bf79a9b516049a1183661a797e88ec8d7e6f7201b27a4dd76e4da",
++        "3": "38c88d76e46d06009f0f00857f0b9a5e04091ab519f9acb4855bb8cb21e7fdf9",
++        "4": "1805c262678cbfaacacbf7c89d00f14375fdc8373d94b2c3848ddb1121607d35",
++        "5": "dc85dfb7524856a11d164e32d9a75666eb697995c93f18adc63e8628404b949d",
++        "6": "2232b02534c508acb7fe628213651d39f016f6056b8264d45c2032ac0090aa55",
++        "7": "559d3952e75aa616935c477787e3dbb13f0146631620241c2562e53ec9eaedab",
++        "8": "d6e37d965bf964d2626200ca6eaf0394d62f7c3906b867074f5f1055f216c158",
++        "9": "586bea53d9aec2cb1b400be2bb3ad5beea3b2fcef08c35c48f2967ba11534384",
++        "10": "498d93095e0988453820cd67f85def7f032b24f6a97d21fbfdb11f6fe5045b25",
++        "11": "bcc9410a765fdfefb040ca134bdbae19eb0b07c8e65fe65d6493fe25bd9d6c94",
++        "12": "83e172aba29790df99762f183455e422a740ef38526399c1b6959a53d02a6a99",
++        "13": "2cc3847ab5f325bf2004e3937ec5ad32ef5398d4eb6a26a07a2453211459acf6",
++        "14": "7dfb4cd17d1f1898104754553822eeecc63e2bb568e8740e527beff5c43e1824",
++        "15": "4749b8e7c50eae609aae321e8093bd15a31cd0fd8bdf9e062314156e5f0b52e9",
++        "16": "71fee4364fdbfce296ca85c020f4b83834000a1e460c0293a3cb4a220b120e49",
++        "17": "9a2cb8f6488ae440d48304c1dd4f3673b3d3b028883e19690b828dc903d3d76d",
++        "18": "048f79d4cfe81a93e6cc2fc409105d317ce933bfa3fdb4ba3af729502d1f4a6a",
++        "19": "451a3ad7d7c4b98eb3a99df13031cd50e6e857582ff514063b4e4e95ee427b02",
++        "20": "12184ea4a31e408e8deeac1f1f1179b2a3daa98d0da51e6b6dbc1ff6f7accabc",
++        "21": "9b8aadc335a167a4596732f93bfcb25dead83e9776ed1016e8b228d5caed9152",
++        "22": "946fafc0f64f73e867ada4e499a7fbf3a1bb260d25b4e4b1add095ba39be22a3",
++        "23": "babad2fbc2e2ca54ee1f0ceed700232384ef6db3f5aeffe9ff7d61643a796020",
++        "24": "5052290803c6eb139a8f167ade7112b188553ec812e0f7cf9b4fd25ef42f43cb",
++        "25": "959f53d73b7d8bc9c5487e90e800a62beb64df797112bd6de5d8fac9e1d4a9df",
++        "26": "3e22420c76c4e6a5263590a3357c02d7b32899484f87bf9a6f5646b1c2036515",
++        "27": "9bb0774d6a2b214d595f9e13e09388f62c5429f9eace7a7ea148426902e8d730",
++        "28": "6289906b4dd23551027231bca824c2688b611274a11aec8d5697c1e043b20734",
++        "29": "d913df3f5a4a99a896c2c92837e5e321baefa38f33a7da8c5cac886155ed47e9",
++        "30": "7f8c281f9e12924eba67f832cafb600641c19e27d2556c1f7f245a1fe5ff063a",
++        "31": "1024dc2f4cae697ab03c61132ed3b3f81372116dc0d708282f8af0ff6e9e756c",
++        "32": "2a722e936e5e3a195bde6a91544590b8896512fa013a5311403078bf9d77a620",
++        "33": "64601de12792f417bab3d3b62a6f8c7b2efc37c78431a3f561e63ca2c1a7b8eb",
++        "34": "17dd06cd0474d8bb1964ff6bbbd5fd2e0a57219ce726294e839b5958d4f742b8",
++        "35": "e064ac9d11f674f9757efdfb1009b02ff2d5e43439c1d507756c3343c30e1c7a",
++        "36": "a06d576ef902cdfa9b9d24c1ea09bb349dcf0027a81e369245b31d31ca48a9d9",
++        "37": "1bf1024592e6dbd406b801029213dd6a8dc5e9dbe325323852792eb13b3a9c97",
++        "38": "d9b0024eafc77ba7983311824c2fc000e2d08d77bab0a927a79c3314299bcd90",
++        "39": "b2216bc52e036c5cdf89e286327ba2e8990565c5fbc0402b2ff6049802117494",
++        "40": "9b39756a6d2e74915eb76cc2e429c6dc916935208e54be1710a40894218ede17",
++        "41": "3cc2730aec2fa930b27e1689d0a04ac5c6dd972ece4fb54005f4e4028839436a",
++        "42": "a19b1eecefd6163c7b663a2ef43f06f89db42641d594035171c0b00e8755d18e",
++        "43": "4531ac066e303cc3bad288750eb184506be1fc23aad0f133ac2cb6f0d0187d39",
++        "44": "9a7312be7c32db2b1b274da0f3d803e0562ce35059e26ce1450408f2e4ad748e",
++        "45": "a41cb2c6f0c03e7fce223a5688ce4f8f88aeaa31f027e70851231faa1600d5d1",
++        "46": "24322f068dd09c2e491c1977e5e182b0ac4f4c2917ccfa7ca3c6f2e6f5a25232",
++        "47": "eef5dc6411d24ec37d39267feccb32d13db1978379de6950c682f059e0ee233a",
++        "48": "89ef07a039df5e4e2f44208f91813e8ee3f0a1206f3f0319d5d750b4acef8908",
++        "49": "00bd1cf1b741a256c8f5dea11fb888fa599f84b07bb0e0e8ea6f69f4dd189c3b",
++        "50": "4eb79240445d2da1cdfa875db05da6ba5638d838f2e1f8da3911549b46c33544",
++        "51": "5fe4e36da9e446ca57a7e85a0a2165f5dda01cb93ec9000db2a5ea8409bec41e",
++        "52": "f3adca8361c438a999e81a8fcf18ff7e6f020daccc345fb789868a5809c620d8",
++        "53": "738621012e5057fbb29b17df4c63b2ba6f3fc22fe466ae3eefb6556056bf7a1f",
++        "54": "d1208e7192460effe311776b1863447eb20aee129cae655bbf1502fadae9c9f3",
++        "55": "2125566d42345681563dc3e76a7943032bc743a02bfcd0bdb1101c59c90c6df9",
++        "56": "348e656471b2b65bd18770b8656e824d7fb2a800b171f94b5b3e321cdbe4b13f",
++        "57": "1878a5851bed5cc3067a5ece8585a031f6fd036e63c265f5023f14d8da10687f",
++        "58": "c14497460efdfcbea11e973d87dbfe4e76a7470c16cc06317236568649ffe2e0",
++        "59": "4633c16eb3805f83cd03a846b2f1c8909727c9325081d630c5e2b7238b9497a9",
++        "60": "ba352962f33fde4def611cb57ca255cbc47eb7a59a777db3beae474dfb2b8f57",
++        "61": "b66caf23e49eae4a7536720bd67b6b2c2f6660fa5ef8178833a016641554b5bb",
++        "62": "8d0a6b0ac2247a7942f420c6265a256e2bbb0e65a17a3d59cc310d135395e857",
++        "63": "81054c32d9bf076d7de305a9450f3251767f81fa25b424ce16f5c7e0125a23ec",
++        "64": "3f34eea20eeb572adc1b06e3005d223e23c67efb8f4b62a2290bd70846485589",
++        "65": "ab65f3eebc696810f2532818fa1f08e4501080656331d0e2670ebbd6a809a162",
++        "66": "e90a842be0489c644dcb736d2f8f05de125f7c3adb3b02beb2ad5438825181e7",
++        "67": "a183df1d4580d854696e5202b3a89f14c77716e98e2450c0dc6d21c5b26ce367"
++      },
++      "pixel_pages_sha256": {
++        "1": "41453d0d3da0c39712c4463235138ab34e62a7bde5b162ca9726fad190c11873",
++        "2": "54f7b18da2c08032ec03acacf298f77f037d1571392d97f91b5d98aa2c2596e1",
++        "3": "59f7e7701979ee7dfb6ec15de665613e0d72fed5a516f3a730666322265f7db4",
++        "4": "3404c6a125faaf8e304dbf429845ab9424c995813710cde4c9424a8e5f6df279",
++        "5": "e1ecc7782f4a7a6012c6c49c5cb8f468145d04511dfc82ff3bce809386bb4f1d",
++        "6": "df022b18fbd1d0bdb964e664a78bb94fea52a7716553be18005f9a340fae67ca",
++        "7": "78144560f9a9216bd8f21668c28597ca75092add994460863b9a380fdfe8ab02",
++        "8": "6f54b5b3f6d23a20f457cb7475fbaf240f98135cf37a740bc732ae4ed032fb60",
++        "9": "e96cf88a9283cf9cd041dcfb1d92073609337d32025341847f2196eac6c8d040",
++        "10": "a3e4421e78152d19516838ec00a09ab55b65b187298f870932c5facb613031fc",
++        "11": "8056be8bdbf408405a0077370aa1e83bf833952eca6bbd4cf3051af5b24e41e0",
++        "12": "caa82d1b0e4cfbf75de116aae18a4b1d512c883a90b946df9816c5c33758150d",
++        "13": "60bcf6422b1fccb4b5a7afa7177df2e0ea9de1b89bec53554614654baa32abd3",
++        "14": "160e13af8edd71046e6f38ba907b54e18577b442b099c66ed0462c78fb8b3b18",
++        "15": "751af498fca814445da85a9b0812ac99ddd3f7929dcf1b1e1f57c8014fef6d56",
++        "16": "f6e6cfb3e25c1d787def80120e68478ced278dce5c72d714d093a34deabcab90",
++        "17": "9682982fb41bedd3058d4415bb4ca60575cadec9e081fef63065790db5d25b9a",
++        "18": "1794ed044b371772a4ec808d3827713d5759268bb74eb6a05b71cb9aa609cf2b",
++        "19": "9b3b6a71158a3b60e3de11c1289d8776600129b0c2faa6422e4f6731c4b18cb7",
++        "20": "3f3a1acddc1f636ffa7f7b237041cce0839bdc0ca8253126b28eaf379138cd8b",
++        "21": "720a641248b0f92c184e51930fa32653e778658860ce2b8071e5d04f9537f953",
++        "22": "b7a0410926cac8fc3cb35e814c88cae3d980c7830a03a23514fc0f7249fb1fdb",
++        "23": "59ff66a076d283a22b5750193361cc603135b7ad598c3fb30c5ca873e6b2eb5f",
++        "24": "51f929b13f19238b9340331951ba2566a7fc98e36d618e4694da55eebba0262e",
++        "25": "f397418416cb47a2f4c759673b261995430e4d68994499f9bf4cc7f51e978299",
++        "26": "5936be9afaef691b4053a525ab2f8d18343833985f45594f95f6b9b0c6f11767",
++        "27": "b77279ad0a4aedc2f10ddb7ccff18742e9a41bb86f7d0edbe98a24cb364a4134",
++        "28": "2fe24082ef27ce53ce9f513b0d3e3c5ed5887d9e1359787a5631fa230c15733c",
++        "29": "c888d18849ab1b611d5272bab2bd0dadb10ead026acd8828875104fc4d0e2494",
++        "30": "607644ca0a46673f6b765415020f02a3b7c646ee35ffadd540b0875e3e578014",
++        "31": "3a41aef885594598b2c45d5a30bd766d8d6ce6b8833d0046e6d1245c47acdd19",
++        "32": "130b79f48d4f79590229f83ef59ef6b993379ca73c66ccba5aede951bbf42f8c",
++        "33": "a549e316f6a483a1c0e609bf307a4d35d4eb1eac21b8b63415a36799cf2caf42",
++        "34": "a142e18cc72763503bb633268466e6a05b967350b0dc3dfb797fc94337918809",
++        "35": "18b2dbb3cf89fd876d448c972adc039069f361de9c5d79897376f11ab7e0fc09",
++        "36": "2b29b969a7e7dc04125b8001d8d1779bff89acb609a6408fb51fa4fa20dbee3c",
++        "37": "0960c02ed21d6ba055de31ab0add5d91750a026b00cb46b4269458df4feb3d69",
++        "38": "cb92bb526b0bc129216b60a0f21464dfcde101c104bf3ee6d4a1bd98492cfc88",
++        "39": "d092791abac656ee0c6a4bc22bd7e42bc9e3f7cb29fe21153686ef500227489e",
++        "40": "d0c7bb91a021621ecc1a17bd5b7cfa5e582735bb497c185e0833d70408fb5cd9",
++        "41": "1b71d306582abffc5f202d3e7d84cd03031a6ede728e6694dc12b16ccafdd6ef",
++        "42": "ab6ba5dca624a541bfe906312becc7976308636e7dd80fb5f495886a713d0abe",
++        "43": "7bdac80b51975b8a2e3e29a8d0a00dac55b81d81e6e767ac66b414df8c0db128",
++        "44": "f36841cf896db7d2f5b535c7154b252bef93f3f361ce2fcf4f801e0e4a42349f",
++        "45": "ea60012881707a772da3ff6da06d106e0823e0e952e3db7cfa33f2f8a647a45f",
++        "46": "d75ee53cc3b5fe4a975ee3110f2592ac5d9b35aae3e476eb86162c4ae77f35c1",
++        "47": "278f5380a1975265c33f12d9f139154e8bb83b3c520195d2516d7f965b78fa25",
++        "48": "3d64ef350899f3f757e61118d85aba0ff2cd1132405b0de7b26dcd5e1069fc81",
++        "49": "404981e2235c385deed654bcb9c9402718d39f9271eca5498d1a8684de6a0d28",
++        "50": "3f50cb6489a3404722a45209dd51e0344b7a331634f9c76bc785081ee8a5f9aa",
++        "51": "309ede7ee9a860f07b837d89ff1ad3aab3fee082d451de748318cbd84136061a",
++        "52": "919f9a7931da6d6f886ca040edbe632e57e456ad201122f99e84e0c27e36fbf3",
++        "53": "d9209666389afe0519748d221c6e07436d547a79097bb88fe2830526dce42c49",
++        "54": "352a3ff3f3cfbb103dbdc127cb5cfca7adfed909f38f8f9c09716f217f6cc355",
++        "55": "5856f2f6ea5b8f868d27fabba0090df0362bfb742bf57a6c8a600b6d0376aa29",
++        "56": "37af40312ed0cb5fab75ebe28b39063e0576ab8643919e1fa82ec95dbb1c4b07",
++        "57": "71f1663b75ffdb3c744cf9a5ef79544fd5eeaf30c14c540b3071c471622c173c",
++        "58": "1f5dcecfe665a08cc9f49f9f49abb942ff1265f86ff6ecce8d3b243c886f7fc4",
++        "59": "3ce2d8d6eaba1c19655bc3cd72bf0741ef905cca90d15de346bfb6afca495542",
++        "60": "2a3790cdf3878a462528b878be8f8a1cb646be256210f26f5cb9b3a58fc76853",
++        "61": "0ca05ee2fafc8c2b52f0eab459adff178140549199d734d8e532987e73f25015",
++        "62": "fd2f19e8a96f4e6113180f9a2d6b90c59d4e2b6d09716c17e6af6cca31292bbd",
++        "63": "cd8430ef9d359cb66e3991bfa58e063f3d9804528bf4461d5143b0b3f10e5eb6",
++        "64": "47560e520cc4eb756915e3911e9246f78fdca8dcfc232195d9d5f12acccebbc1",
++        "65": "138964079e4199b5787a7b022d4c64e56e276557da1b2c4b10ebf26ea3d2ec7d",
++        "66": "5dda8f6400b488d95c663c70d67512f35045967c316fc373d3986566c28e9cd3",
++        "67": "c593b41094ce5af3a215bbc81d7b33d4207018f7ef5bad6f28a202c13de17af3"
++      },
++      "page_model_pages_sha256": {
++        "1": "05ae1216ff3c7fd4d3a1b8b9b4603f67ac1f17638ab797912d9dd1fcb96ce24b",
++        "2": "57734286041b61b2a3923061d183514d539d4a80b4cfbd89d3a7df2a17402656",
++        "3": "5dd237b8bd12266a2b269319645359e87fafd6c12d047279b3d154765d8726a0",
++        "4": "8d82ae720ae03e5657d0ab3d83c6eb62a058c4b46ec3ba1ef232f36c09e912d2",
++        "5": "562d927b0548f1c069029679c476954bbf84f5236128d9d85243ff38cfe2e545",
++        "6": "5493dd6fbac93869e35d61b83d1354400d0f3184cdcc137dc79a4abc0a6fb107",
++        "7": "58e7c922d8bdf45f5c0c0de053c19f6f10ce658f4bee4e80e535547ffb77a332",
++        "8": "b7400a9eb238e7defa11357b3a71ea5c99997bc8df3dd2159b27d9a3a67598d7",
++        "9": "ff5ba4db34936ccd2a8f8bc138124fed9b38a73a37fab7638cb51b30af5fd17f",
++        "10": "8b6872c971f8f1a918db4007cac21886f75bf27e156500e5a985d932b232c5f6",
++        "11": "c4952b53e03c797c65cff251f796d2b12d7b0ddd94137e95dd14dd11c5d545de",
++        "12": "bee17ae73f8fc621b954c0b98ca6c3d7917d0711dbb89ec4683c3ba22f3ad16a",
++        "13": "7577762f6ddd1336e18a25e3d1cc0ca2ad3e8022ced2fd4522d0ebbc0eb6d1d1",
++        "14": "0b586f472bb2d16036bb7c69f87c811b7be5d7b1ff8dd0460e0e078f4dd32bbf",
++        "15": "eab56d19cad7c718d02b45b02c89a28dcc143f57f6229476a38d59ef44d826c5",
++        "16": "222ae58733b85b2ffe976a887273db5062961cd3621dfa7bbf96c2dd9d74d869",
++        "17": "c01e4d401691bf2a0dc12f1fd06efbf8dd76dda9b96fadbb13fbc88258d00aec",
++        "18": "323d307c78fc16ca4ab0d7cb8942cbcf12ebd92a6be49d313aac14730c947d39",
++        "19": "3e3d0a7a69a00d49b7fc40ba8179df1668d207a295b4c43e815bf635252a8243",
++        "20": "1063a557dea84a02f7533d31f047ffc7de1b95adcea99577b030efb46a81bb57",
++        "21": "9783c2b3cdba46b3509173f2c4d9e44eac0c1924fd109752130b11865a29c8aa",
++        "22": "de56d73047e64007c07945e7cf133ad345b9969bd3c9335f79043cd45b11c141",
++        "23": "2206ec94db0c6e601c358ed4a715776339a9f416cca2e01bae85131440a2e882",
++        "24": "43526d1af6c4cbec8897f432824665f322e9105301dfd677ca747cdda9b630a0",
++        "25": "ce50b7e905a9c6a1500e14e6050194fc6187ce4511486f362fda755dbd658061",
++        "26": "43ef53a5786be7594b8d8fb03c4778904d5a29864e6dcc501c0222684c8e036f",
++        "27": "dd6fff88004885c6ba6332f88aad184f21f8772c9af87b58abc48559fb613557",
++        "28": "4a19dba8783e5d8c0388670699dcab2135e43cc227cfb3c9610be062ad3a1582",
++        "29": "fc9a734e0a108c46f8fcd464539ef41100d141012f6155bbd1722705abce6951",
++        "30": "f3e9aadb83a3dddd684dcf5bc298d83b44c0b0028b48edc40118e3f599ffb67a",
++        "31": "9b950b853a5ee92dce5dd9f24587e8efd00888fc7ddb02a46942709d4d1d9d30",
++        "32": "4d88752129c1e24359f5b739bd4ae95a41a5bc0aad2c894ba9f5b0562b27aa53",
++        "33": "47f354b234de807f2d9670f8b67f470dbf8bcafa857694eb805d675fb9d15cd5",
++        "34": "ac68b030d4418224b397b18b80f3215b778055fe41510b08d11a68e86b030295",
++        "35": "49c18a641d24080e5e24d65cd5f7f0edb90961decaf212a3924d8f18c071cf08",
++        "36": "995a22cc20435c17e9929181cdb38c150d59a63ef1f72592866e7a8ccddde2f1",
++        "37": "d6a976db2c5599501da14df2109d3c08aac960e8d8075026a7fbc1f769f1a8c6",
++        "38": "1288520d92f5c76c435f494d6024460854c238eafeaceb787695c1e289e321b8",
++        "39": "b64b742daa12fa3f0941dc55f9a1bbc0836244f54ad009e2d51fcbdd5fef6beb",
++        "40": "f22f09ca26a8d8cafd4214c273c34857073d55bb15c1b5c334a3b46de5c84227",
++        "41": "322ef5d29ea136a18c1be74b85ca44e6cb371982bd28fc02f96c7d982bdb1042",
++        "42": "6eb6fe0a6661879de835df14c1a0a521276e2bf52f2be44c53de1263fbe1916c",
++        "43": "660f6ef0b159d8fdd145d4615e28833d4d532a77896250d4b8f3f6c61859c0ab",
++        "44": "d1ee605a97375026a1285155129396ae8892ace3505e133743b7c91055744bc4",
++        "45": "75f2ce5784276d60ec58e9c177104de2f1d7d4e7bf370e8cf2391351374d6fcb",
++        "46": "d8d9997b04770a3d51a7da1ddc6895b4ebea91c0aec55fed3b0ec4a682792840",
++        "47": "785bc1aff65620391b529000294177ffee85f8edc2e512c59ce06c9a263ef107",
++        "48": "a175a446f7a556384b9b1d8c4cc0d5a357fe5a453cb2830c1e83c7d73718d00f",
++        "49": "8c0139917392225d20d3ac4842c61844f262d3e9df7095d2ccd6df6607ec6e4b",
++        "50": "c512d20771d2bbad08822141a60e99882f12c5fe9ae18cab47766c4d0dc21109",
++        "51": "a32c37f659b6c9cef504c86eb6b17eca843b6b59dff59a6388fafebab8118516",
++        "52": "bb75a1a6383a6264651b4176a893b3c5446370cb4b0c75cb99142a345f62a6ba",
++        "53": "b89e85a762a049fb0fd66ca94de5a87ba5f2444e336c2c35ff177e435a5748c8",
++        "54": "a8b7da889d01d338d77d4af66316c6b488568b5e3a7d7d561cc2dc6ca8bfdeeb",
++        "55": "434b217807114ef2687364ac2c723f8f5638c61dfcb29c4cb62412e9f0fdf862",
++        "56": "66824bb07e43697e7deacc2bd2a2d1623a759104e3b5744ce03dac3ffc096c01",
++        "57": "e0880e742f9462508b0595d41f62f1687aaaeff34f5804a8f94a711ae86cbc03",
++        "58": "41336f51bdc2af401a20f1c51075de8425b471c59f6e1154e3e153def8187502",
++        "59": "36359afa25df4128d36181a7374dfe6781e4bca10fca6211a54d65ebd4d69490",
++        "60": "da116b370d078b5061ad8c5dda802a0481ae3ef45e5438508e8e48be714f5a0f",
++        "61": "5ff72d4e77bba4a6bfbd673cf2b30d5af06cec586fc56ef787de9dc8c910ce0f",
++        "62": "a5831ad0a1fc282dcc48856804c6beb22d9edc4646fd49b8d7684eb5d5ad168f",
++        "63": "bee7f24df6e846a26fef39362ffd9d6ac6f699226fe20f109ccad31562c0bbe7",
++        "64": "181ed98adba27ca070ef6ab481df5d398538d346a592fa5a186b72e59a5ac87e",
++        "65": "2b4927758ceb86ebd55d0b7730e23e189474522d1433c4ead05db01e2bcc38f9",
++        "66": "ecb0734379f2875dca67f412bc168fdd41040611d242b1702eaad7d6f0469cf8",
++        "67": "0ecd15d197bd5c34ab789cca9783d54b7c59451da3f4cbfbf01161a874c84f54"
++      },
++      "book_model_sha256": "8a24c528a7af1d5ebbb2d82e4ccd46722931ebb1ee33ea8d3f1da300c15497cc"
+     }
+   }
+ }
+\ No newline at end of file

@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 2340" width="540" height="1170" font-family="sans-serif">
+<rect width="100%" height="100%" fill="#fff" stroke="#000" stroke-width="2"/>
+<rect x="0" y="0" width="1080" height="2340" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<rect x="0" y="0" width="1080" height="2277" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<rect x="0" y="83" width="1080" height="2194" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<rect x="0" y="83" width="1080" height="2194" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="6" y="109" font-size="22" fill="#9e9e9e">action_bar_root</text>
+<rect x="0" y="83" width="1080" height="2194" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="6" y="109" font-size="22" fill="#9e9e9e">content</text>
+<rect x="0" y="83" width="1080" height="2194" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="6" y="109" font-size="22" fill="#9e9e9e">toc_dialog_container</text>
+<rect x="0" y="83" width="1080" height="2194" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="6" y="109" font-size="22" fill="#9e9e9e">toc_fragment_container</text>
+<rect x="0" y="83" width="1080" height="305" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="6" y="109" font-size="22" fill="#9e9e9e">toc_header_container</text>
+<rect x="21" y="83" width="1038" height="305" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<rect x="21" y="83" width="1038" height="305" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="27" y="109" font-size="22" fill="#9e9e9e">toc_header_view_container</text>
+<rect x="21" y="104" width="172" height="252" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<rect x="193" y="104" width="688" height="252" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="199" y="130" font-size="22" fill="#9e9e9e">toc_header_layout</text>
+<rect x="214" y="104" width="646" height="172" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="220" y="130" font-size="22" fill="#9e9e9e">Stranger in a Strange Land (Robert A Hei</text>
+<rect x="214" y="308" width="646" height="48" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="220" y="334" font-size="22" fill="#9e9e9e">Robert A. Heinlein</text>
+<rect x="881" y="104" width="172" height="252" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<rect x="927" y="104" width="126" height="126" fill="none" stroke="#1565c0" stroke-width="3"/>
+<text x="933" y="130" font-size="22" fill="#1565c0">Close Table Of Contents</text>
+<rect x="927" y="104" width="126" height="126" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="933" y="130" font-size="22" fill="#9e9e9e">toc_header_close_image</text>
+<rect x="0" y="391" width="1080" height="396" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="6" y="417" font-size="22" fill="#9e9e9e">toc_and_book_cover_container</text>
+<rect x="0" y="391" width="1080" height="396" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="6" y="417" font-size="22" fill="#9e9e9e">toc_list_container</text>
+<rect x="0" y="391" width="1080" height="396" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="6" y="417" font-size="22" fill="#9e9e9e">toc_list_recycler_view</text>
+<rect x="0" y="391" width="1080" height="132" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<rect x="0" y="391" width="1080" height="132" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="6" y="417" font-size="22" fill="#9e9e9e">toc_entry_contents</text>
+<rect x="0" y="391" width="1080" height="132" fill="none" stroke="#1565c0" stroke-width="3"/>
+<text x="6" y="417" font-size="22" fill="#1565c0">Go to beginning</text>
+<rect x="21" y="391" width="948" height="132" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="27" y="417" font-size="22" fill="#9e9e9e">toc_entry_title_layout</text>
+<rect x="21" y="433" width="948" height="48" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="27" y="459" font-size="22" fill="#9e9e9e">Go to beginning</text>
+<rect x="0" y="523" width="1080" height="132" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<rect x="0" y="523" width="1080" height="132" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="6" y="549" font-size="22" fill="#9e9e9e">toc_entry_contents</text>
+<rect x="0" y="523" width="1080" height="132" fill="none" stroke="#1565c0" stroke-width="3"/>
+<text x="6" y="549" font-size="22" fill="#1565c0">Cover</text>
+<rect x="21" y="523" width="948" height="132" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="27" y="549" font-size="22" fill="#9e9e9e">toc_entry_title_layout</text>
+<rect x="21" y="565" width="948" height="48" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="27" y="591" font-size="22" fill="#9e9e9e">Cover</text>
+<rect x="0" y="655" width="1080" height="132" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<rect x="0" y="655" width="1080" height="132" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="6" y="681" font-size="22" fill="#9e9e9e">toc_entry_contents</text>
+<rect x="0" y="655" width="1080" height="132" fill="none" stroke="#1565c0" stroke-width="3"/>
+<text x="6" y="681" font-size="22" fill="#1565c0">Stranger in a Strange Land (uncut) 1 Pag</text>
+<rect x="21" y="655" width="690" height="132" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="27" y="681" font-size="22" fill="#9e9e9e">toc_entry_title_layout</text>
+<rect x="21" y="697" width="690" height="48" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="27" y="723" font-size="22" fill="#9e9e9e">Stranger in a Strange Land (uncut) 1</text>
+<rect x="764" y="655" width="258" height="132" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="770" y="681" font-size="22" fill="#9e9e9e">toc_entry_end_align_items</text>
+<rect x="764" y="697" width="258" height="48" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="770" y="723" font-size="22" fill="#9e9e9e">2</text>
+<rect x="0" y="655" width="13" height="132" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+</svg>
