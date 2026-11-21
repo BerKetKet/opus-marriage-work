@@ -4,8 +4,10 @@
 The staging folder must contain REPORT.md. Screenshots live in <staging>/screenshots/ and every
 image needs one line in <staging>/screenshots/DESCRIPTIONS.tsv (file<TAB>what it shows).
 The script refuses duplicates, forbidden file types, forbidden strings, missing descriptions,
-and warns about near-blank images. It also records the git state of both subfolders.
+near-blank/black images (unless the description starts with EXPECTED-BLANK:), and before/after pairs
+that did not really change (screenshots/PAIRS.tsv: before<TAB>after<TAB>min_changed_pixels). It also records the git state of both subfolders.
 """
+import warnings; warnings.filterwarnings("ignore")
 import argparse, hashlib, os, re, struct, subprocess, sys, zipfile, pathlib
 
 FORBIDDEN_EXT = {".ttf", ".otf", ".bin", ".dic", ".so", ".a", ".apk", ".aar", ".xz", ".zip", ".jar"}
@@ -108,9 +110,13 @@ def main():
             if p.name not in desc and rel not in desc and p.name != "DESCRIPTIONS.tsv":
                 errors.append("image has no description in screenshots/DESCRIPTIONS.tsv: " + rel)
             bs = blank_stats(p)
-            if bs and bs[1] < 6.0:
-                warns.append("near-blank image (stddev %.1f): %s" % (bs[1], rel))
-                flags.append("NEAR-BLANK")
+            dtext = desc.get(p.name, desc.get(rel, ""))
+            if bs and (bs[1] < 6.0 or (bs[0] < 10.0 and bs[1] < 20.0)):
+                if dtext.startswith("EXPECTED-BLANK:"):
+                    flags.append("EXPECTED-BLANK")
+                else:
+                    errors.append("near-blank or black image (mean %.1f, stddev %.1f): %s. Retake it, or start its description with EXPECTED-BLANK: if blank is the subject" % (bs[0], bs[1], rel))
+                    flags.append("BLANK")
         if ext in TEXT_EXT:
             try:
                 t = p.read_text(errors="ignore")
@@ -121,6 +127,34 @@ def main():
                     errors.append("forbidden string %r found in %s" % (fb, rel))
         rows.append((rel, p.stat().st_size, h[:12], dims, ",".join(flags)))
 
+    pairs = st / "screenshots" / "PAIRS.tsv"
+    if pairs.exists():
+        try:
+            from PIL import Image, ImageChops
+        except Exception:
+            Image = None
+            warns.append("PIL missing: PAIRS.tsv not checked")
+        if Image:
+            for ln in pairs.read_text().splitlines():
+                parts = ln.split("\t")
+                if len(parts) < 3 or ln.startswith("#"):
+                    continue
+                b, c, mn = parts[0].strip(), parts[1].strip(), int(parts[2])
+                try:
+                    ia = Image.open(st / "screenshots" / b).convert("RGB")
+                    ib = Image.open(st / "screenshots" / c).convert("RGB")
+                    if ia.size != ib.size:
+                        errors.append("pair %s/%s: different sizes" % (b, c))
+                        continue
+                    d = ImageChops.difference(ia, ib).convert("L")
+                    d = d.crop((0, 90, d.width, d.height))
+                    n = sum(1 for v in d.getdata() if v > 16)
+                    if n < mn:
+                        errors.append("pair %s -> %s changed only %d pixels below the status bar (needs >= %d): the screen did not really change" % (b, c, n, mn))
+                    else:
+                        print("pair ok: %s -> %s changed %d pixels" % (b, c, n))
+                except Exception as e:
+                    errors.append("pair %s/%s unreadable: %s" % (b, c, e))
     if errors:
         print("ERRORS (%d):" % len(errors))
         for e in errors:
