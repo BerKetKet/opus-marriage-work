@@ -1,0 +1,143 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 2340" width="540" height="1170" font-family="sans-serif">
+<rect width="100%" height="100%" fill="#fff" stroke="#000" stroke-width="2"/>
+<rect x="0" y="0" width="1080" height="2340" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<rect x="0" y="0" width="1080" height="2340" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<rect x="0" y="0" width="1080" height="2340" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<rect x="0" y="0" width="1080" height="2340" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="6" y="26" font-size="22" fill="#9e9e9e">action_bar_root</text>
+<rect x="0" y="0" width="1080" height="2340" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="6" y="26" font-size="22" fill="#9e9e9e">content</text>
+<rect x="0" y="0" width="1080" height="2340" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="6" y="26" font-size="22" fill="#9e9e9e">reader_drawer_layout</text>
+<rect x="0" y="0" width="1080" height="2340" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="6" y="26" font-size="22" fill="#9e9e9e">notepad_fragment_container</text>
+<rect x="0" y="0" width="1080" height="2340" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="6" y="26" font-size="22" fill="#9e9e9e">reader_under_drawer</text>
+<rect x="0" y="0" width="1080" height="2340" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="6" y="26" font-size="22" fill="#9e9e9e">content_container</text>
+<rect x="0" y="0" width="1080" height="2340" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<rect x="0" y="0" width="1080" height="2340" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="6" y="26" font-size="22" fill="#9e9e9e">full_audio_player_container</text>
+<rect x="0" y="0" width="1080" height="2340" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="6" y="26" font-size="22" fill="#9e9e9e">jedi_reading_dashboard</text>
+<rect x="0" y="0" width="1080" height="2340" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<rect x="0" y="0" width="1080" height="2340" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="6" y="26" font-size="22" fill="#9e9e9e">bottom_sheet_container</text>
+<rect x="0" y="0" width="1080" height="2340" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<rect x="0" y="0" width="1080" height="2340" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<rect x="0" y="0" width="1080" height="2340" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="6" y="26" font-size="22" fill="#9e9e9e">main_panel</text>
+<rect x="0" y="0" width="1080" height="2340" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="6" y="26" font-size="22" fill="#9e9e9e">reader_menu_container</text>
+<rect x="0" y="0" width="1080" height="2340" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="6" y="26" font-size="22" fill="#9e9e9e">magnified_content_container</text>
+<rect x="0" y="0" width="1080" height="2340" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="6" y="26" font-size="22" fill="#9e9e9e">jedi_chrome_rewrite_container</text>
+<rect x="0" y="0" width="1080" height="2340" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<rect x="0" y="0" width="1080" height="2340" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="6" y="26" font-size="22" fill="#9e9e9e">reader_chrome_fragment_container</text>
+<rect x="0" y="0" width="1080" height="2340" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="6" y="26" font-size="22" fill="#9e9e9e">reader_content_fragment_container</text>
+<rect x="0" y="0" width="1080" height="2340" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="6" y="26" font-size="22" fill="#9e9e9e">content_container</text>
+<rect x="0" y="0" width="1080" height="2340" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="6" y="26" font-size="22" fill="#9e9e9e">recycler_view</text>
+<rect x="26" y="0" width="342" height="515" fill="none" stroke="#1565c0" stroke-width="3"/>
+<text x="32" y="26" font-size="22" fill="#1565c0">Page 1.</text>
+<rect x="70" y="0" width="256" height="419" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="76" y="26" font-size="22" fill="#9e9e9e">page_container</text>
+<rect x="70" y="0" width="256" height="419" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<rect x="70" y="419" width="256" height="61" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="76" y="445" font-size="22" fill="#9e9e9e">page_label_container</text>
+<rect x="70" y="420" width="256" height="60" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<rect x="188" y="420" width="20" height="60" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<rect x="26" y="610" width="1028" height="44" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="32" y="636" font-size="22" fill="#9e9e9e">Stranger in a Strange Land (uncut) 1</text>
+<rect x="26" y="749" width="342" height="673" fill="none" stroke="#1565c0" stroke-width="3"/>
+<text x="32" y="775" font-size="22" fill="#1565c0">Page 2.</text>
+<rect x="70" y="772" width="256" height="554" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="76" y="798" font-size="22" fill="#9e9e9e">page_container</text>
+<rect x="70" y="772" width="256" height="554" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<rect x="70" y="1326" width="256" height="61" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="76" y="1352" font-size="22" fill="#9e9e9e">page_label_container</text>
+<rect x="70" y="1327" width="256" height="60" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<rect x="188" y="1327" width="20" height="60" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<rect x="369" y="749" width="342" height="673" fill="none" stroke="#1565c0" stroke-width="3"/>
+<text x="375" y="775" font-size="22" fill="#1565c0">Page 3. Current Location. </text>
+<rect x="413" y="772" width="255" height="554" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="419" y="798" font-size="22" fill="#9e9e9e">page_container</text>
+<rect x="413" y="772" width="255" height="554" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<rect x="413" y="1326" width="255" height="61" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="419" y="1352" font-size="22" fill="#9e9e9e">page_label_container</text>
+<rect x="413" y="1327" width="255" height="60" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<rect x="530" y="1327" width="20" height="60" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<rect x="711" y="749" width="342" height="673" fill="none" stroke="#1565c0" stroke-width="3"/>
+<text x="717" y="775" font-size="22" fill="#1565c0">Page 4.</text>
+<rect x="755" y="772" width="256" height="554" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="761" y="798" font-size="22" fill="#9e9e9e">page_container</text>
+<rect x="755" y="772" width="256" height="554" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<rect x="755" y="1326" width="256" height="61" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="761" y="1352" font-size="22" fill="#9e9e9e">page_label_container</text>
+<rect x="755" y="1327" width="256" height="60" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<rect x="873" y="1327" width="20" height="60" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<rect x="26" y="1422" width="342" height="673" fill="none" stroke="#1565c0" stroke-width="3"/>
+<text x="32" y="1448" font-size="22" fill="#1565c0">Page 4.</text>
+<rect x="70" y="1445" width="256" height="554" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="76" y="1471" font-size="22" fill="#9e9e9e">page_container</text>
+<rect x="70" y="1445" width="256" height="554" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<rect x="70" y="1999" width="256" height="61" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="76" y="2025" font-size="22" fill="#9e9e9e">page_label_container</text>
+<rect x="70" y="2000" width="256" height="60" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<rect x="188" y="2000" width="20" height="60" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<rect x="369" y="1422" width="342" height="673" fill="none" stroke="#1565c0" stroke-width="3"/>
+<text x="375" y="1448" font-size="22" fill="#1565c0">Page 5.</text>
+<rect x="413" y="1445" width="256" height="554" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="419" y="1471" font-size="22" fill="#9e9e9e">page_container</text>
+<rect x="413" y="1445" width="256" height="554" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<rect x="413" y="1999" width="256" height="61" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="419" y="2025" font-size="22" fill="#9e9e9e">page_label_container</text>
+<rect x="413" y="2000" width="256" height="60" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<rect x="531" y="2000" width="20" height="60" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<rect x="711" y="1422" width="342" height="673" fill="none" stroke="#1565c0" stroke-width="3"/>
+<text x="717" y="1448" font-size="22" fill="#1565c0">Page 7.</text>
+<rect x="755" y="1445" width="256" height="554" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="761" y="1471" font-size="22" fill="#9e9e9e">page_container</text>
+<rect x="755" y="1445" width="256" height="554" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<rect x="755" y="1999" width="256" height="61" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="761" y="2025" font-size="22" fill="#9e9e9e">page_label_container</text>
+<rect x="755" y="2000" width="256" height="60" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<rect x="873" y="2000" width="20" height="60" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<rect x="26" y="2095" width="342" height="245" fill="none" stroke="#1565c0" stroke-width="3"/>
+<text x="32" y="2121" font-size="22" fill="#1565c0">Page 7.</text>
+<rect x="70" y="2118" width="256" height="222" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="76" y="2144" font-size="22" fill="#9e9e9e">page_container</text>
+<rect x="70" y="2118" width="256" height="222" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<rect x="369" y="2095" width="342" height="245" fill="none" stroke="#1565c0" stroke-width="3"/>
+<text x="375" y="2121" font-size="22" fill="#1565c0">Page 8.</text>
+<rect x="413" y="2118" width="256" height="222" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="419" y="2144" font-size="22" fill="#9e9e9e">page_container</text>
+<rect x="413" y="2118" width="256" height="222" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<rect x="711" y="2095" width="342" height="245" fill="none" stroke="#1565c0" stroke-width="3"/>
+<text x="717" y="2121" font-size="22" fill="#1565c0">Page 9.</text>
+<rect x="755" y="2118" width="256" height="222" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="761" y="2144" font-size="22" fill="#9e9e9e">page_container</text>
+<rect x="755" y="2118" width="256" height="222" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<rect x="394" y="0" width="292" height="525" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="400" y="26" font-size="22" fill="#9e9e9e">breadcrumb_1_container</text>
+<rect x="0" y="2161" width="1080" height="11" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="6" y="2187" font-size="22" fill="#9e9e9e">toolbar_shadow</text>
+<rect x="394" y="1732" width="292" height="440" fill="none" stroke="#1565c0" stroke-width="3"/>
+<text x="400" y="1758" font-size="22" fill="#1565c0">breadcrumb_2</text>
+<rect x="448" y="1754" width="183" height="384" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="454" y="1780" font-size="22" fill="#9e9e9e">breadcrumb_content_container</text>
+<rect x="453" y="1759" width="173" height="374" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<rect x="453" y="2028" width="173" height="105" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="459" y="2054" font-size="22" fill="#9e9e9e">breadcrumb_label_container</text>
+<rect x="453" y="2037" width="173" height="96" fill="none" stroke="#9e9e9e" stroke-width="1"/>
+<text x="459" y="2063" font-size="22" fill="#9e9e9e">Back to
+10</text>
+<rect x="0" y="2172" width="1080" height="168" fill="none" stroke="#1565c0" stroke-width="3"/>
+<text x="6" y="2198" font-size="22" fill="#1565c0">bev_toolbar</text>
+<rect x="0" y="2172" width="178" height="168" fill="none" stroke="#1565c0" stroke-width="3"/>
+<text x="6" y="2198" font-size="22" fill="#1565c0">Close Bird's Eye view</text>
+</svg>
